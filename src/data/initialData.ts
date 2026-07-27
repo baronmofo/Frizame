@@ -422,80 +422,7 @@ export const initialProducts: Product[] = [
   }
 ];
 
-export const initialRawMaterials: RawMaterial[] = [
-  {
-    id: 1,
-    nombre: "Mozzarella Barra",
-    proveedor: "Artico / San Ignacio",
-    marca: "La Tonadita",
-    presentacion: "Horma x 4 Kg",
-    costo: 34000
-  },
-  {
-    id: 2,
-    nombre: "Rebozador Panko",
-    proveedor: "Grangys",
-    marca: "Panko Gold",
-    presentacion: "Bolsa x 10 Kg",
-    costo: 22000
-  },
-  {
-    id: 3,
-    nombre: "Huevo Entero N°1",
-    proveedor: "Avícola Sur",
-    marca: "Granja Campo",
-    presentacion: "Cajón 30 Docenas",
-    costo: 54000
-  },
-  {
-    id: 4,
-    nombre: "Harina de Trigo 000",
-    proveedor: "Molinos Cañuelas",
-    marca: "Favorita",
-    presentacion: "Bolsa x 25 Kg",
-    costo: 16250
-  },
-  {
-    id: 5,
-    nombre: "Carne de Pollo deshuesada",
-    proveedor: "Frigorífico Avellaneda",
-    marca: "Granja Tres Arroyos",
-    presentacion: "Caja x 20 Kg",
-    costo: 90000
-  },
-  {
-    id: 6,
-    nombre: "Filet de Merluza s/espina",
-    proveedor: "Distribuidora del Mar",
-    marca: "Puerto Mar",
-    presentacion: "Caja x 10 Kg",
-    costo: 42000
-  },
-  {
-    id: 7,
-    nombre: "Espinaca Fresca Picada",
-    proveedor: "Mercado Central",
-    marca: "Huerta Directa",
-    presentacion: "Cajón x 10 Kg",
-    costo: 12000
-  },
-  {
-    id: 8,
-    nombre: "Bolsa Polietileno Termosellable",
-    proveedor: "Envases del Sur",
-    marca: "FlexoPack 95x62",
-    presentacion: "Pack x 1000 u.",
-    costo: 120000
-  },
-  {
-    id: 9,
-    nombre: "Hoja A4 Rótulos Autoadhesivos",
-    proveedor: "Ledesma / Grafex",
-    marca: "Apli A4",
-    presentacion: "Pack x 100 Hojas",
-    costo: 28000
-  }
-];
+export const initialRawMaterials: RawMaterial[] = [];
 
 export const initialClients: Client[] = [
   {
@@ -504,33 +431,8 @@ export const initialClients: Client[] = [
     canal: "Comercio",
     telefono: "1164096233",
     direccion: "Rondeau 1000",
-    saldo: 12500,
-    historial: [
-      {
-        id: "tx-101",
-        fecha: "2026-07-15",
-        concepto: "Pedido Bandejas Muzzarella x 2",
-        debe: 13000,
-        haber: 0,
-        saldo: 13000
-      },
-      {
-        id: "tx-102",
-        fecha: "2026-07-18",
-        concepto: "Pago Efectivo",
-        debe: 0,
-        haber: 500,
-        saldo: 12500
-      },
-      {
-        id: "tx-104",
-        fecha: "2026-07-21",
-        concepto: "[ANULADO] Reserva Cancelada - OP-00104",
-        debe: 0,
-        haber: 0,
-        saldo: 12500
-      }
-    ]
+    saldo: 0,
+    historial: []
   },
   {
     id: 2,
@@ -547,17 +449,8 @@ export const initialClients: Client[] = [
     canal: "Particular",
     telefono: "1161746860",
     direccion: "Malvinas y Fair",
-    saldo: 4000,
-    historial: [
-      {
-        id: "tx-103",
-        fecha: "2026-07-20",
-        concepto: "Medallón Pollo Bandeja x 1",
-        debe: 4000,
-        haber: 0,
-        saldo: 4000
-      }
-    ]
+    saldo: 0,
+    historial: []
   },
   {
     id: 4,
@@ -574,17 +467,8 @@ export const initialClients: Client[] = [
     canal: "Comercio",
     telefono: "1149865757",
     direccion: "Dardo Rocha 556",
-    saldo: 18400,
-    historial: [
-      {
-        id: "tx-104",
-        fecha: "2026-07-10",
-        concepto: "Pedido Surtido Congelados",
-        debe: 18400,
-        haber: 0,
-        saldo: 18400
-      }
-    ]
+    saldo: 0,
+    historial: []
   },
   {
     id: 6,
@@ -597,32 +481,7 @@ export const initialClients: Client[] = [
   }
 ];
 
-export const initialMovements: Movement[] = [
-  {
-    id: 1,
-    fecha: "2026-07-22",
-    tipo: "Entrada Stock",
-    item: "Bastoncitos de Mozzarella Bandeja x 16",
-    cantidad: 30,
-    clienteProveedor: "Elaboración Propia"
-  },
-  {
-    id: 2,
-    fecha: "2026-07-21",
-    tipo: "Salida Preventa",
-    item: "Medallón de Merluza Bandeja x 4",
-    cantidad: 5,
-    clienteProveedor: "Claudia Eirin"
-  },
-  {
-    id: 3,
-    fecha: "2026-07-20",
-    tipo: "Fraccionamiento",
-    item: "Mozzarella Kg -> Bandejas",
-    cantidad: 10,
-    clienteProveedor: "Elaboración Interna"
-  }
-];
+export const initialMovements: Movement[] = [];
 
 export const initialSuppliers: Supplier[] = [
   {
@@ -634,17 +493,8 @@ export const initialSuppliers: Supplier[] = [
     direccion: "Av. Crovara 1200, La Matanza",
     cuit: "30-71122334-9",
     rubro: "Rebozadores y Congelados",
-    saldo: 45000,
-    historial: [
-      {
-        id: "sup-101",
-        fecha: "2026-07-12",
-        concepto: "Compra Panko Gold x 20 Kg",
-        debe: 45000,
-        haber: 0,
-        saldo: 45000
-      }
-    ]
+    saldo: 0,
+    historial: []
   },
   {
     id: 2,
@@ -667,17 +517,8 @@ export const initialSuppliers: Supplier[] = [
     direccion: "Mitre 450, Quilmes",
     cuit: "30-68991122-3",
     rubro: "Bolsas y Packaging",
-    saldo: 120000,
-    historial: [
-      {
-        id: "sup-102",
-        fecha: "2026-07-18",
-        concepto: "Bolsas Polietileno Pack x 1000",
-        debe: 120000,
-        haber: 0,
-        saldo: 120000
-      }
-    ]
+    saldo: 0,
+    historial: []
   }
 ];
 
@@ -705,75 +546,4 @@ export const initialSystemConfig: AppSystemConfig = {
   margenParticularSugerido: 50
 };
 
-export const initialRecipes: Recipe[] = [
-  {
-    id: 1,
-    productoId: 201,
-    productoNombre: "BASTONCITOS DE MOZZARELLA BANDEJA X 16",
-    insumoId: 1,
-    insumoNombre: "Mozzarella Barra",
-    gramosRequeridos: 433,
-    insumos: [
-      { insumoId: 101, insumoNombre: "BASTONCITOS DE MOZZARELLA X KG.", gramosOCantidad: 433, unidad: 'grs' },
-      { insumoId: 8, insumoNombre: "Bolsa Polietileno Termosellable", gramosOCantidad: 1, unidad: 'u' },
-      { insumoId: 9, insumoNombre: "Hoja A4 Rótulo Autoadhesivo", gramosOCantidad: 0.125, unidad: 'u' }
-    ],
-    costoEstimadoBandeja: 4903,
-  },
-  {
-    id: 2,
-    productoId: 202,
-    productoNombre: "BOCADITOS DE CALABAZA Y MUZARELLA BANDEJA X 12",
-    insumoId: 102,
-    insumoNombre: "BOCADITOS DE CALABAZA Y MUZARELLA X KG.",
-    gramosRequeridos: 377,
-    insumos: [
-      { insumoId: 102, insumoNombre: "BOCADITOS DE CALABAZA Y MUZARELLA X KG.", gramosOCantidad: 377, unidad: 'grs' },
-      { insumoId: 8, insumoNombre: "Bolsa Polietileno Termosellable", gramosOCantidad: 1, unidad: 'u' },
-      { insumoId: 9, insumoNombre: "Hoja A4 Rótulo Autoadhesivo", gramosOCantidad: 0.125, unidad: 'u' }
-    ],
-    costoEstimadoBandeja: 2455,
-  },
-  {
-    id: 3,
-    productoId: 203,
-    productoNombre: "BOCADITOS DE ESPINACA BANDEJA X 12",
-    insumoId: 103,
-    insumoNombre: "BOCADITOS DE ESPINACA X KG.",
-    gramosRequeridos: 377,
-    insumos: [
-      { insumoId: 103, insumoNombre: "BOCADITOS DE ESPINACA X KG.", gramosOCantidad: 377, unidad: 'grs' },
-      { insumoId: 8, insumoNombre: "Bolsa Polietileno Termosellable", gramosOCantidad: 1, unidad: 'u' },
-      { insumoId: 9, insumoNombre: "Hoja A4 Rótulo Autoadhesivo", gramosOCantidad: 0.125, unidad: 'u' }
-    ],
-    costoEstimadoBandeja: 2190,
-  },
-  {
-    id: 4,
-    productoId: 205,
-    productoNombre: "MEDALLON DE MERLUZA BANDEJA X 4",
-    insumoId: 105,
-    insumoNombre: "MEDALLON DE MERLUZA X KG.",
-    gramosRequeridos: 400,
-    insumos: [
-      { insumoId: 105, insumoNombre: "MEDALLON DE MERLUZA X KG.", gramosOCantidad: 400, unidad: 'grs' },
-      { insumoId: 8, insumoNombre: "Bolsa Polietileno Termosellable", gramosOCantidad: 1, unidad: 'u' },
-      { insumoId: 9, insumoNombre: "Hoja A4 Rótulo Autoadhesivo", gramosOCantidad: 0.125, unidad: 'u' }
-    ],
-    costoEstimadoBandeja: 2000,
-  },
-  {
-    id: 5,
-    productoId: 209,
-    productoNombre: "NUGGETS BANDEJA X 16",
-    insumoId: 109,
-    insumoNombre: "NUGGETS X KG.",
-    gramosRequeridos: 360,
-    insumos: [
-      { insumoId: 109, insumoNombre: "NUGGETS X KG.", gramosOCantidad: 360, unidad: 'grs' },
-      { insumoId: 8, insumoNombre: "Bolsa Polietileno Termosellable", gramosOCantidad: 1, unidad: 'u' },
-      { insumoId: 9, insumoNombre: "Hoja A4 Rótulo Autoadhesivo", gramosOCantidad: 0.125, unidad: 'u' }
-    ],
-    costoEstimadoBandeja: 3018,
-  }
-];
+export const initialRecipes: Recipe[] = [];

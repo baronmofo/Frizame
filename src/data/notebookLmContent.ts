@@ -26,10 +26,10 @@ El sistema organiza los códigos de producto en rangos prefijados para facilitar
 
 ---
 
-### 3. Lógica Híbrida de Merma, Persistencia Automática y Seguridad
+### 3. Lógica Híbrida de Merma, Persistencia Automática, Seguridad y Permisos
 - **Lógica Híbrida de Merma (Diferenciación por Solapa):**
   - **En Fraccionamiento (Solapa 4-2):** El campo de "% Merma Operativa" carga por defecto el porcentaje 'mermaPct' configurado para la categoría destino (ej. 3.5% para Bandeja 2XX), pero permanece **editable por el operador** para registrar imprevistos o mermas excepcionales (rotura de producto, pérdidas de manipulación).
-  - **En Desglose de Costos (Solapa 5-1):** El campo de "% Merma Fija (Categoría)" es estrictamente **Read-Only (Solo Lectura)**. Recupera y muestra obligatoriamente el 'mermaPct' oficial asignado a la categoría en la configuración del sistema, garantizando que el cálculo de precio de costo, precio sugerido y márgenes de ganancia no sufran alteración o manipulación manual.
+  - **En Desglose de Costos (Solapa 5-1):** El campo de "% Merma Fija (Categoría)" es strictly **Read-Only (Solo Lectura)**. Recupera y muestra obligatoriamente el 'mermaPct' oficial asignado a la categoría en la configuración del sistema, garantizando que el cálculo de precio de costo, precio sugerido y márgenes de ganancia no sufran alteración o manipulación manual.
 - **Fórmula de Costo Unitario de Bandeja (2XX):**
   $$\\text{Costo MP} = \\sum (\\text{Cantidad Insumo (g)} \\times \\text{Costo/g})$$
   $$\\text{Costo con Merma Fija} = \\text{Costo MP} \\times \\left(1 + \\frac{\\%\\text{Merma Categoría}}{100}\\right)$$
@@ -42,8 +42,10 @@ El sistema organiza los códigos de producto en rangos prefijados para facilitar
     frizame_backup_YYYYMMDD_HHMM.zip
   - El archivo ZIP incluye todos los estados del sistema: products.json, clients.json, settings.json, history.json, movements.json, rawMaterials.json, orders.json, suppliers.json.
 
-- **Seguridad y Control de Acceso:**
-  - Para ejecutar la función **Restablecer Datos Iniciales de Fábrica** en la Solapa 6-4, el sistema requiere ingresar y validar obligatoriamente la **Contraseña de Administrador** (ej: frizame2026). Se deniega el acceso si la clave ingresada no es válida.
+- **Seguridad, Control de Acceso y Restricciones del Rol Vendedor:**
+  - **Seguridad de Restablecimiento:** Para ejecutar la función **Restablecer Datos Iniciales de Fábrica** en la Solapa 6-4, el sistema requiere ingresar y validar obligatoriamente la **Contraseña de Administrador** (ej: frizame2026). Se deniega el acceso si la clave ingresada no es válida.
+  - **Ocultamiento de Contraseñas y Filtrado de Administradores para Vendedores:** Los usuarios con rol **Vendedor** no pueden visualizar las contraseñas de los usuarios (mascaradas con puntos ocultos estáticos sin botón de desocultado). Asimismo, los usuarios de rol superior (**Administrador**) son filtrados automáticamente de la tabla de gestión de usuarios cuando un Vendedor accede a la configuración, evitando que este modifique, elimine o altere permisos de las cuentas administradoras.
+  - **Segmentación de Subpestañas:** Para el rol Vendedor, el módulo de Configuración habilita únicamente las subpestañas autorizadas (*Usuarios y Permisos* y *Colorimetría y Temas*), ocultando el acceso a *Categorías*, *Parámetros*, *Base de Datos* y *Cuaderno NotebookLM*, reservadas en exclusiva para el rol Administrador.
 
 ---
 
@@ -95,16 +97,26 @@ Cada evento de Venta, Fraccionamiento, Cobro o Ajuste se registra en history.jso
 2. **Control de Lotes y Vencimiento Automático:**
    - Formato de Lote: L2026-XXX.
    - Cálculo automático de fecha de vencimiento según política de conservación a -18°C.
-3. **Sistema de Autenticación, Auditoría de Sesión y Control de Roles:**
+3. **Sistema de Autenticación, Auditoría de Sesión y Control de Roles Consolidados:**
    - **Inicio de Sesión Unificado:** Acceso protegido mediante validación de correo electrónico y contraseña. La pantalla de login preserva la privacidad del sistema sin exponer credenciales ni listas públicas de usuarios.
    - **Cierre de Sesión Seguro:** El botón **"Salir"** en el encabezado destruye el token de sesión activo y redirige automáticamente al usuario a la pantalla de login.
-   - **Registro de Logs de Auditoría de Usuario:** Todos los eventos de inicio/cierre de sesión, ventas, fraccionamientos y cambios de configuración quedan registrados permanentemente en el archivo auditado **'history.json'**, incluyendo el nombre y rol del usuario responsable ('usuarioResponsable').
-   - **Edición de Usuarios en Pestaña 6 (Subsolapa 6-3):** Los administradores pueden modificar los nombres, contraseñas, roles ('Administrador', 'Vendedor', 'Operador') y estado activo de los usuarios. El campo de **Correo Electrónico (Email)** se mantiene estrictamente **Inmutable (Solo Lectura)** para preservar la integridad del historial de auditoría del sistema.
+   - **Consolidación de Roles Activos:** El sistema consolida los roles de operación en **Administrador** (Acceso Total y Configuración Global) y **Vendedor** (Gestión Comercial, Clientes y Preventas).
+   - **Edición Protegida de Usuarios (Subsolapa 6-3 / 3):**
+     - El campo de **Correo Electrónico (Email)** es **Inmutable (Solo Lectura)** para asegurar la continuidad de la auditoría.
+     - Un usuario con rol Vendedor solo puede crear o editar usuarios de rol Vendedor; la asignación del rol Administrador está deshabilitada.
+     - Las contraseñas para los Vendedores permanecen totalmente ocultas (enmascaradas en modo solo lectura), y los usuarios Administradores no se muestran en su listado.
+4. **Reseteo de Cuentas Corrientes e Historiales Comercial / Proveedores:**
+   - Todas las cuentas corrientes de **Clientes** y **Proveedores** están inicializadas con **saldo cero ($0.00)** y con su historial de movimientos/transacciones totalmente vaciado ('historial: []').
+   - Se han eliminado las preventas anteriores (órdenes OP) y salidas de preventa para ofrecer un punto de inicio contable limpio.
 
 ---
 
 ### 6. Configuraciones Avanzadas
-- **Matriz de Permisos por Rol:** Administrador (Acceso total), Vendedor (Control preventas/clientes), Operador (Fraccionamiento/materia prima).
+- **Matriz de Permisos por Rol Consolidado:**
+  - **Administrador:** Acceso ilimitado a todas las funciones, mantenimiento de base de datos, parámetros de sobrecostos, reglas de código, categorías, exportación de respaldos .ZIP y visibilidad de claves de usuarios.
+  - **Vendedor:** Acceso comercial a preventas, clientes, facturación y gestión restringida de usuarios (sin acceso a claves de terceros ni usuarios Administradores, y sin acceso a configuraciones críticas del sistema).
 - **Control de Inmutabilidad de Identidad:** La dirección de correo electrónico del usuario no se puede alterar una vez registrado.
+- **Cuentas Corrientes en Cero:** Sincronización limpia de saldos e historiales comerciales para todos los clientes y proveedores.
 - **Respaldos ZIP Auditable:** Descarga e importación en 1 clic de archivos frizame_backup_YYYYMMDD_HHMM.zip con estado completo de la base de datos y logs de usuario.
 `;
+

@@ -53,6 +53,7 @@ const getCategoryTipoDefault = (nombre: string): 'Productos' | 'Materia Prima' |
 
 export const ConfiguracionModule: React.FC = () => {
   const {
+    role,
     systemConfig,
     updateSystemConfig,
     exportData,
@@ -386,27 +387,40 @@ export const ConfiguracionModule: React.FC = () => {
   const [newNombre, setNewNombre] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [newUserPassword, setNewUserPassword] = useState('');
-  const [newRol, setNewRol] = useState<'Administrador' | 'Vendedor' | 'Operador'>('Operador');
+  const [showNewUserPass, setShowNewUserPass] = useState(false);
+  const [newRol, setNewRol] = useState<'Administrador' | 'Vendedor'>('Vendedor');
   const [showAddUser, setShowAddUser] = useState(false);
 
   // Edit user state
   const [userToEdit, setUserToEdit] = useState<SystemUser | null>(null);
   const [editUserNombre, setEditUserNombre] = useState('');
   const [editUserPassword, setEditUserPassword] = useState('');
-  const [editUserRol, setEditUserRol] = useState<'Administrador' | 'Vendedor' | 'Operador'>('Operador');
+  const [showEditUserPass, setShowEditUserPass] = useState(false);
+  const [editUserRol, setEditUserRol] = useState<'Administrador' | 'Vendedor'>('Vendedor');
   const [editUserActivo, setEditUserActivo] = useState(true);
 
+  // Table password visibility state
+  const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
+
   const handleOpenEditUser = (u: SystemUser) => {
+    if (role === 'Vendedor' && u.rol === 'Administrador') {
+      return;
+    }
     setUserToEdit(u);
     setEditUserNombre(u.nombre);
     setEditUserPassword(u.password || 'frizame2026');
-    setEditUserRol(u.rol);
+    setShowEditUserPass(false);
+    setEditUserRol(u.rol === 'Administrador' ? 'Administrador' : 'Vendedor');
     setEditUserActivo(u.activo);
   };
 
   const handleSaveUserEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!userToEdit) return;
+
+    if (role === 'Vendedor' && (userToEdit.rol === 'Administrador' || editUserRol === 'Administrador')) {
+      return;
+    }
 
     triggerConfirm(
       'Actualizar Datos de Usuario',
@@ -493,6 +507,7 @@ export const ConfiguracionModule: React.FC = () => {
   const handleToggleUserStatus = (id: string) => {
     const u = users.find((x) => x.id === id);
     if (!u) return;
+    if (role === 'Vendedor' && u.rol === 'Administrador') return;
 
     triggerConfirm(
       'Cambio de Estado de Usuario',
@@ -506,6 +521,7 @@ export const ConfiguracionModule: React.FC = () => {
 
   const handleDeleteUserConfirm = () => {
     if (!userToDelete) return;
+    if (role === 'Vendedor' && userToDelete.rol === 'Administrador') return;
     const updated = users.filter((u) => u.id !== userToDelete.id);
     setUsersList(updated);
     setUserToDelete(null);
@@ -552,7 +568,15 @@ export const ConfiguracionModule: React.FC = () => {
     );
   };
 
-  const [activeSubTab, setActiveSubTab] = useState<'categorias' | 'parametros' | 'usuarios' | 'sistema' | 'colorimetria' | 'notebooklm'>('categorias');
+  const [activeSubTab, setActiveSubTab] = useState<'categorias' | 'parametros' | 'usuarios' | 'sistema' | 'colorimetria' | 'notebooklm'>(
+    role === 'Vendedor' ? 'usuarios' : 'categorias'
+  );
+
+  React.useEffect(() => {
+    if (role === 'Vendedor' && activeSubTab !== 'usuarios' && activeSubTab !== 'colorimetria') {
+      setActiveSubTab('usuarios');
+    }
+  }, [role, activeSubTab]);
 
   // Colorimetría state
   const [selectedTheme, setSelectedTheme] = useState<'classic' | 'sapphire' | 'emerald' | 'sunset' | 'dark'>(
@@ -604,36 +628,40 @@ export const ConfiguracionModule: React.FC = () => {
         <div className="flex items-center gap-2 bg-[#E8F4F8] px-3.5 py-1.5 rounded-xl border border-[#D1E3EB]">
           <Shield className="w-5 h-5 text-[#017E9A]" />
           <span className="text-xs font-bold text-[#0B4F6C]">
-            Nivel de Acceso: Administrador Principal
+            Nivel de Acceso: {role === 'Admin' ? 'Administrador Principal' : 'Vendedor / Operador'}
           </span>
         </div>
       </div>
 
       {/* Internal Sub-Tabs Navigation for Reduced Vertical Scrolling */}
       <div className="flex flex-wrap gap-2 border-b border-[#D1E3EB] pb-3 bg-[#F4F8FA] p-2 rounded-xl border">
-        <button
-          onClick={() => setActiveSubTab('categorias')}
-          className={`py-2 px-4 rounded-lg font-brand font-bold text-xs sm:text-sm transition-all flex items-center gap-2 ${
-            activeSubTab === 'categorias'
-              ? 'bg-[#0B4F6C] text-white shadow-sm'
-              : 'bg-white text-[#0B4F6C] hover:bg-[#E8F4F8] border border-[#D1E3EB]'
-          }`}
-        >
-          <Building2 className="w-4 h-4" />
-          <span>1. Categorías y Rangos de Código</span>
-        </button>
+        {role === 'Admin' && (
+          <>
+            <button
+              onClick={() => setActiveSubTab('categorias')}
+              className={`py-2 px-4 rounded-lg font-brand font-bold text-xs sm:text-sm transition-all flex items-center gap-2 ${
+                activeSubTab === 'categorias'
+                  ? 'bg-[#0B4F6C] text-white shadow-sm'
+                  : 'bg-white text-[#0B4F6C] hover:bg-[#E8F4F8] border border-[#D1E3EB]'
+              }`}
+            >
+              <Building2 className="w-4 h-4" />
+              <span>1. Categorías y Rangos de Código</span>
+            </button>
 
-        <button
-          onClick={() => setActiveSubTab('parametros')}
-          className={`py-2 px-4 rounded-lg font-brand font-bold text-xs sm:text-sm transition-all flex items-center gap-2 ${
-            activeSubTab === 'parametros'
-              ? 'bg-[#0B4F6C] text-white shadow-sm'
-              : 'bg-white text-[#0B4F6C] hover:bg-[#E8F4F8] border border-[#D1E3EB]'
-          }`}
-        >
-          <Scale className="w-4 h-4" />
-          <span>2. Parámetros y Sobrecostos</span>
-        </button>
+            <button
+              onClick={() => setActiveSubTab('parametros')}
+              className={`py-2 px-4 rounded-lg font-brand font-bold text-xs sm:text-sm transition-all flex items-center gap-2 ${
+                activeSubTab === 'parametros'
+                  ? 'bg-[#0B4F6C] text-white shadow-sm'
+                  : 'bg-white text-[#0B4F6C] hover:bg-[#E8F4F8] border border-[#D1E3EB]'
+              }`}
+            >
+              <Scale className="w-4 h-4" />
+              <span>2. Parámetros y Sobrecostos</span>
+            </button>
+          </>
+        )}
 
         <button
           onClick={() => setActiveSubTab('usuarios')}
@@ -647,17 +675,19 @@ export const ConfiguracionModule: React.FC = () => {
           <span>3. Usuarios y Permisos</span>
         </button>
 
-        <button
-          onClick={() => setActiveSubTab('sistema')}
-          className={`py-2 px-4 rounded-lg font-brand font-bold text-xs sm:text-sm transition-all flex items-center gap-2 ${
-            activeSubTab === 'sistema'
-              ? 'bg-[#0B4F6C] text-white shadow-sm'
-              : 'bg-white text-[#0B4F6C] hover:bg-[#E8F4F8] border border-[#D1E3EB]'
-          }`}
-        >
-          <Database className="w-4 h-4" />
-          <span>4. Base de Datos y Sistema</span>
-        </button>
+        {role === 'Admin' && (
+          <button
+            onClick={() => setActiveSubTab('sistema')}
+            className={`py-2 px-4 rounded-lg font-brand font-bold text-xs sm:text-sm transition-all flex items-center gap-2 ${
+              activeSubTab === 'sistema'
+                ? 'bg-[#0B4F6C] text-white shadow-sm'
+                : 'bg-white text-[#0B4F6C] hover:bg-[#E8F4F8] border border-[#D1E3EB]'
+            }`}
+          >
+            <Database className="w-4 h-4" />
+            <span>4. Base de Datos y Sistema</span>
+          </button>
+        )}
 
         <button
           onClick={() => setActiveSubTab('colorimetria')}
@@ -671,17 +701,19 @@ export const ConfiguracionModule: React.FC = () => {
           <span>5. Colorimetría y Temas</span>
         </button>
 
-        <button
-          onClick={() => setActiveSubTab('notebooklm')}
-          className={`py-2 px-4 rounded-lg font-brand font-bold text-xs sm:text-sm transition-all flex items-center gap-2 ${
-            activeSubTab === 'notebooklm'
-              ? 'bg-[#0B4F6C] text-white shadow-sm'
-              : 'bg-white text-[#0B4F6C] hover:bg-[#E8F4F8] border border-[#D1E3EB]'
-          }`}
-        >
-          <BookOpen className="w-4 h-4 text-emerald-600" />
-          <span>6. Cuaderno NotebookLM / Docs</span>
-        </button>
+        {role === 'Admin' && (
+          <button
+            onClick={() => setActiveSubTab('notebooklm')}
+            className={`py-2 px-4 rounded-lg font-brand font-bold text-xs sm:text-sm transition-all flex items-center gap-2 ${
+              activeSubTab === 'notebooklm'
+                ? 'bg-[#0B4F6C] text-white shadow-sm'
+                : 'bg-white text-[#0B4F6C] hover:bg-[#E8F4F8] border border-[#D1E3EB]'
+            }`}
+          >
+            <BookOpen className="w-4 h-4 text-emerald-600" />
+            <span>6. Cuaderno NotebookLM / Docs</span>
+          </button>
+        )}
       </div>
 
       {/* SUB-TAB 1: Categorías y Rangos de Código */}
@@ -1148,14 +1180,24 @@ export const ConfiguracionModule: React.FC = () => {
                       </div>
                       <div>
                         <label className="block font-semibold text-gray-700 mb-1">Contraseña Requerida</label>
-                        <input
-                          type="text"
-                          required
-                          value={newUserPassword}
-                          onChange={(e) => setNewUserPassword(e.target.value)}
-                          placeholder="Clave (ej: frizame2026)"
-                          className="w-full p-2 border border-[#D1E3EB] rounded-lg bg-white font-mono"
-                        />
+                        <div className="relative">
+                          <input
+                            type={showNewUserPass ? 'text' : 'password'}
+                            required
+                            value={newUserPassword}
+                            onChange={(e) => setNewUserPassword(e.target.value)}
+                            placeholder="Clave (ej: frizame2026)"
+                            className="w-full p-2 border border-[#D1E3EB] rounded-lg bg-white font-mono pr-8"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowNewUserPass(!showNewUserPass)}
+                            className="absolute right-2 top-2 text-gray-400 hover:text-gray-700"
+                            title={showNewUserPass ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                          >
+                            {showNewUserPass ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
                       </div>
                       <div>
                         <label className="block font-semibold text-gray-700 mb-1">Rol / Permisos</label>
@@ -1164,8 +1206,7 @@ export const ConfiguracionModule: React.FC = () => {
                           onChange={(e) => setNewRol(e.target.value as any)}
                           className="w-full p-2 border border-[#D1E3EB] rounded-lg bg-white font-semibold"
                         >
-                          <option value="Administrador">Administrador (Acceso Total)</option>
-                          <option value="Operador">Operador (Fraccionamiento/Stock)</option>
+                          {role === 'Admin' && <option value="Administrador">Administrador (Acceso Total)</option>}
                           <option value="Vendedor">Vendedor (Preventas/Clientes)</option>
                         </select>
                       </div>
@@ -1195,13 +1236,21 @@ export const ConfiguracionModule: React.FC = () => {
                       <tr className="bg-[#E8F4F8] text-[#0B4F6C] font-brand border-b border-[#D1E3EB]">
                         <th className="p-2.5">Usuario / Email</th>
                         <th className="p-2.5">Rol / Permiso</th>
+                        <th className="p-2.5">Contraseña</th>
                         <th className="p-2.5">Último Acceso</th>
                         <th className="p-2.5">Estado</th>
                         <th className="p-2.5 text-right">Acciones</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#D1E3EB]">
-                      {users.map((u) => (
+                      {users
+                        .filter((u) => {
+                          if (role === 'Vendedor') {
+                            return u.rol !== 'Administrador';
+                          }
+                          return true;
+                        })
+                        .map((u) => (
                         <tr key={u.id} className="hover:bg-[#E8F4F8]/40 transition-colors">
                           <td className="p-2.5">
                             <strong className="text-gray-800 block text-sm">{u.nombre}</strong>
@@ -1212,13 +1261,31 @@ export const ConfiguracionModule: React.FC = () => {
                               className={`px-2 py-0.5 rounded font-bold ${
                                 u.rol === 'Administrador'
                                   ? 'bg-purple-100 text-purple-800'
-                                  : u.rol === 'Operador'
-                                  ? 'bg-amber-100 text-amber-800'
                                   : 'bg-sky-100 text-sky-800'
                               }`}
                             >
                               {u.rol}
                             </span>
+                          </td>
+                          <td className="p-2.5 font-mono text-gray-700">
+                            <div className="flex items-center gap-1.5">
+                              <span>{role === 'Admin' && visiblePasswords[u.id] ? (u.password || 'frizame2026') : '••••••••'}</span>
+                              {role === 'Admin' && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setVisiblePasswords((prev) => ({
+                                      ...prev,
+                                      [u.id]: !prev[u.id],
+                                    }))
+                                  }
+                                  className="p-1 text-gray-400 hover:text-gray-700 rounded transition-colors"
+                                  title={visiblePasswords[u.id] ? 'Ocultar clave' : 'Mostrar clave'}
+                                >
+                                  {visiblePasswords[u.id] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                </button>
+                              )}
+                            </div>
                           </td>
                           <td className="p-2.5 text-gray-600">{u.ultimoAcceso}</td>
                           <td className="p-2.5">
@@ -1766,13 +1833,23 @@ export const ConfiguracionModule: React.FC = () => {
 
               <div>
                 <label className="block font-bold text-gray-700 mb-1">Contraseña Requerida</label>
-                <input
-                  type="text"
-                  required
-                  value={editUserPassword}
-                  onChange={(e) => setEditUserPassword(e.target.value)}
-                  className="w-full p-2.5 border border-[#D1E3EB] rounded-lg bg-white font-mono font-bold text-gray-800 focus:outline-none focus:border-[#017E9A]"
-                />
+                <div className="relative">
+                  <input
+                    type={showEditUserPass ? 'text' : 'password'}
+                    required
+                    value={editUserPassword}
+                    onChange={(e) => setEditUserPassword(e.target.value)}
+                    className="w-full p-2.5 border border-[#D1E3EB] rounded-lg bg-white font-mono font-bold text-gray-800 focus:outline-none focus:border-[#017E9A] pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowEditUserPass(!showEditUserPass)}
+                    className="absolute right-3 top-3 text-gray-400 hover:text-gray-700"
+                    title={showEditUserPass ? 'Ocultar clave' : 'Mostrar clave'}
+                  >
+                    {showEditUserPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
 
               <div>
@@ -1782,8 +1859,7 @@ export const ConfiguracionModule: React.FC = () => {
                   onChange={(e) => setEditUserRol(e.target.value as any)}
                   className="w-full p-2.5 border border-[#D1E3EB] rounded-lg bg-white font-bold text-gray-800 focus:outline-none focus:border-[#017E9A]"
                 >
-                  <option value="Administrador">Administrador (Acceso Total)</option>
-                  <option value="Operador">Operador (Fraccionamiento/Stock)</option>
+                  {role === 'Admin' && <option value="Administrador">Administrador (Acceso Total)</option>}
                   <option value="Vendedor">Vendedor (Preventas/Clientes)</option>
                 </select>
               </div>

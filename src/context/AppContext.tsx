@@ -127,32 +127,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (saved) {
       try {
         const loaded: Product[] = JSON.parse(saved).products || initialProducts;
-        if (!loaded.some((p) => String(p.id) === '207' || String(p.codigo) === '207')) {
-          const prod207 = initialProducts.find((p) => String(p.codigo) === '207');
-          if (prod207) loaded.push(prod207);
-        }
-        return loaded;
+        return loaded.filter((p) => String(p.codigo).startsWith('1') || String(p.codigo).startsWith('2'));
       } catch (e) {
         console.error(e);
       }
     }
-    return initialProducts;
+    return initialProducts.filter((p) => String(p.codigo).startsWith('1') || String(p.codigo).startsWith('2'));
   });
 
   const [clients, setClients] = useState<Client[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
-      try { return JSON.parse(saved).clients || initialClients; } catch (e) { console.error(e); }
+      try {
+        const loaded: Client[] = JSON.parse(saved).clients || initialClients;
+        return loaded.map((c) => ({ ...c, saldo: 0, historial: [] }));
+      } catch (e) { console.error(e); }
     }
-    return initialClients;
+    return initialClients.map((c) => ({ ...c, saldo: 0, historial: [] }));
   });
 
   const [movements, setMovements] = useState<Movement[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
-      try { return JSON.parse(saved).movements || initialMovements; } catch (e) { console.error(e); }
+      try {
+        const loaded: Movement[] = JSON.parse(saved).movements || initialMovements;
+        return loaded.filter((m) => m.tipo !== 'Salida Preventa');
+      } catch (e) { console.error(e); }
     }
-    return initialMovements;
+    return initialMovements.filter((m) => m.tipo !== 'Salida Preventa');
   });
 
   const [rawMaterials, setRawMaterials] = useState<RawMaterial[]>(() => {
@@ -171,76 +173,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return initialRecipes;
   });
 
-  const [ordersOP, setOrdersOP] = useState<OrderOP[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try { return JSON.parse(saved).ordersOP || []; } catch (e) { console.error(e); }
-    }
-    // Default mock orders if empty
-    return [
-      {
-        id: 'op-1001',
-        numeroOP: 'OP-00101',
-        fecha: new Date().toISOString().split('T')[0],
-        clientId: 1,
-        clientNombre: 'Adriana Kiosko',
-        clientTelefono: '1164096233',
-        clientDireccion: 'Rondeau 1000',
-        canal: 'Comercio',
-        items: [
-          {
-            productId: 201,
-            codigo: '201',
-            nombre: 'BASTONCITOS DE MOZZARELLA BANDEJA X 16',
-            tipo: 'Bandeja',
-            cantidad: 2,
-            precioUnitario: 6500,
-            subtotal: 13000,
-          },
-        ],
-        subtotal: 13000,
-        descuento: 500,
-        total: 12500,
-        formaPago: 'Cuenta Corriente',
-        observaciones: 'Entregar por la tarde',
-        estado: 'Confirmado',
-      },
-      {
-        id: 'op-1004',
-        numeroOP: 'OP-00104',
-        fecha: new Date().toISOString().split('T')[0],
-        clientId: 1,
-        clientNombre: 'Adriana Kiosko',
-        clientTelefono: '1164096233',
-        clientDireccion: 'Rondeau 1000',
-        canal: 'Comercio',
-        items: [
-          {
-            productId: 202,
-            codigo: '202',
-            nombre: 'BOCADITOS DE CALABAZA Y MUZARELLA BANDEJA X 12',
-            tipo: 'Bandeja',
-            cantidad: 3,
-            precioUnitario: 3800,
-            subtotal: 11400,
-          },
-        ],
-        subtotal: 11400,
-        descuento: 0,
-        total: 11400,
-        formaPago: 'Cuenta Corriente',
-        observaciones: 'Reserva cancelada previa (Anulada)',
-        estado: 'Anulado',
-      },
-    ];
-  });
+  const [ordersOP, setOrdersOP] = useState<OrderOP[]>(() => []);
 
   const [suppliers, setSuppliers] = useState<Supplier[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
-      try { return JSON.parse(saved).suppliers || initialSuppliers; } catch (e) { console.error(e); }
+      try {
+        const loaded: Supplier[] = JSON.parse(saved).suppliers || initialSuppliers;
+        return loaded.map((s) => ({ ...s, saldo: 0, historial: [] }));
+      } catch (e) { console.error(e); }
     }
-    return initialSuppliers;
+    return initialSuppliers.map((s) => ({ ...s, saldo: 0, historial: [] }));
   });
 
   const [systemConfig, setSystemConfig] = useState<AppSystemConfig>(() => {
@@ -269,6 +212,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           return parsed.map((u) => ({
             ...u,
             password: u.password || 'frizame2026',
+            rol: (u.rol as string) === 'Operador' ? 'Vendedor' : u.rol,
           }));
         }
       } catch (e) {
@@ -287,10 +231,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       },
       {
         id: 'usr-2',
-        nombre: 'Juan Perez (Operador)',
+        nombre: 'Juan Perez (Vendedor)',
         email: 'juan.operario@frizame.com',
         password: 'frizame2026',
-        rol: 'Operador',
+        rol: 'Vendedor',
         activo: true,
         ultimoAcceso: 'Ayer 18:30 hs',
       },
@@ -1585,11 +1529,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const resetData = () => {
-    setProducts(initialProducts);
-    setClients(initialClients);
-    setMovements(initialMovements);
+    setProducts(initialProducts.filter((p) => String(p.codigo).startsWith('1') || String(p.codigo).startsWith('2')));
+    setClients(initialClients.map((c) => ({ ...c, saldo: 0, historial: [] })));
+    setMovements([]);
     setRawMaterials(initialRawMaterials);
     setRecipes(initialRecipes);
+    setOrdersOP([]);
+    setSuppliers(initialSuppliers.map((s) => ({ ...s, saldo: 0, historial: [] })));
     localStorage.removeItem(STORAGE_KEY);
   };
 

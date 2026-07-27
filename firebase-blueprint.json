@@ -1,0 +1,69 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "Frizame frozen food product item (1xx granel or 2xx bandeja)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "codigo": { "type": "string" },
+        "nombre": { "type": "string" },
+        "tipo": { "type": "string" },
+        "pesoGrs": { "type": "number" },
+        "costo": { "type": "number" },
+        "precioComercio": { "type": "number" },
+        "precioParticular": { "type": "number" },
+        "stockGranelKg": { "type": "number" },
+        "stockBandejas": { "type": "number" },
+        "grsPorBandeja": { "type": "number" },
+        "ingredientes": { "type": "string" },
+        "alergenos": { "type": "string" },
+        "conservacion": { "type": "string" },
+        "activo": { "type": "boolean" }
+      },
+      "required": ["codigo", "nombre", "tipo", "costo", "precioComercio", "precioParticular"]
+    },
+    "SystemUser": {
+      "title": "SystemUser",
+      "description": "System access user profile with assigned role",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nombre": { "type": "string" },
+        "email": { "type": "string" },
+        "rol": { "type": "string", "enum": ["Administrador", "Vendedor"] },
+        "activo": { "type": "boolean" },
+        "ultimoAcceso": { "type": "string" }
+      },
+      "required": ["nombre", "email", "rol", "activo"]
+    },
+    "Client": {
+      "title": "Client",
+      "description": "Customer profile for direct sales",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nombre": { "type": "string" },
+        "canal": { "type": "string" },
+        "telefono": { "type": "string" },
+        "direccion": { "type": "string" },
+        "saldo": { "type": "number" }
+      },
+      "required": ["nombre", "canal"]
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": { "$ref": "#/entities/Product" },
+      "description": "Catalog of frozen products"
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/SystemUser" },
+      "description": "Registered system user accounts"
+    },
+    "/clients/{clientId}": {
+      "schema": { "$ref": "#/entities/Client" },
+      "description": "Registered customer accounts"
+    }
+  }
+}

@@ -1,9 +1,11 @@
 {
-  "projectId": "remixed-project-id",
-  "appId": "remixed-app-id",
-  "apiKey": "remixed-api-key",
-  "authDomain": "remixed-auth-domain",
-  "storageBucket": "remixed-storage-bucket",
-  "messagingSenderId": "remixed-messaging-sender-id",
-  "measurementId": "remixed-measurement-id"
+  "projectId": "galvanized-mark-0zp2g",
+  "appId": "1:151805152100:web:8a04526d81261c0c250871",
+  "apiKey": "AIzaSyBdG8N_JhzejeCUC7Zb96YD8Rvs8sLmWks",
+  "authDomain": "galvanized-mark-0zp2g.firebaseapp.com",
+  "storageBucket": "galvanized-mark-0zp2g.firebasestorage.app",
+  "messagingSenderId": "151805152100",
+  "measurementId": "",
+  "oAuthClientId": "151805152100-v9dutun2to1rqgb2ppnjbkj2o62cj4n5.apps.googleusercontent.com",
+  "recaptchaSiteKey": ""
 }

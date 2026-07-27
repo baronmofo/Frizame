@@ -120,32 +120,30 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
           </button>
 
           {role === 'Admin' && (
-            <>
-              <button
-                onClick={() => setActiveTab('mod-costos')}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-brand text-xs md:text-sm font-medium transition-all ${
-                  activeTab === 'mod-costos'
-                    ? 'bg-[#017E9A] text-white shadow-md'
-                    : 'text-sky-100 hover:bg-white/10 hover:text-white'
-                }`}
-              >
-                <Calculator className="w-4 h-4" />
-                <span>5. Proveedores</span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab('mod-configuracion')}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-brand text-xs md:text-sm font-medium transition-all ${
-                  activeTab === 'mod-configuracion'
-                    ? 'bg-[#017E9A] text-white shadow-md'
-                    : 'text-sky-100 hover:bg-white/10 hover:text-white'
-                }`}
-              >
-                <Settings className="w-4 h-4" />
-                <span>6. Configuración</span>
-              </button>
-            </>
+            <button
+              onClick={() => setActiveTab('mod-costos')}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-brand text-xs md:text-sm font-medium transition-all ${
+                activeTab === 'mod-costos'
+                  ? 'bg-[#017E9A] text-white shadow-md'
+                  : 'text-sky-100 hover:bg-white/10 hover:text-white'
+              }`}
+            >
+              <Calculator className="w-4 h-4" />
+              <span>5. Proveedores</span>
+            </button>
           )}
+
+          <button
+            onClick={() => setActiveTab('mod-configuracion')}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-brand text-xs md:text-sm font-medium transition-all ${
+              activeTab === 'mod-configuracion'
+                ? 'bg-[#017E9A] text-white shadow-md'
+                : 'text-sky-100 hover:bg-white/10 hover:text-white'
+            }`}
+          >
+            <Settings className="w-4 h-4" />
+            <span>6. Configuración</span>
+          </button>
         </nav>
 
         {/* Role Selector & Backup Actions */}
