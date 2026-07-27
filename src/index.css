@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --primary-blue: #0B4F6C;
+    --secondary-teal: #017E9A;
+    --soft-blue: #E8F4F8;
+    --dark-text: #1C2D37;
+    --accent-green: #2EC4B6;
+    --accent-orange: #FF9F1C;
+    --accent-red: #E74C3C;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: #F4F8FA;
+    color: #1C2D37;
+    margin: 0;
+    padding: 0;
+  }
+
+  h1, h2, h3, h4, .font-brand {
+    font-family: 'Fredoka', cursive, sans-serif;
+  }
+}
+
+/* Print Styles for A4 Landscape Label Sheet (9 Rótulos) and A4 Portrait Sticker Sheet (30 Stickers) */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .only-print {
+    display: block !important;
+  }
+
+  body {
+    background: white !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    color: black !important;
+  }
+
+  .print-sheet-a4-landscape {
+    width: 287mm;
+    height: 198mm;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(3, 93mm);
+    grid-template-rows: repeat(3, 62mm);
+    gap: 3mm 4mm;
+    page-break-after: always;
+  }
+
+  .rotulo-print-landscape {
+    width: 93mm;
+    height: 62mm;
+    border: 1.5pt solid #000000;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: #FFFFFF !important;
+    color: #000000 !important;
+    font-family: 'Inter', sans-serif;
+    page-break-inside: avoid;
+    position: relative;
+  }
+
+  .print-sheet-a4-portrait {
+    width: 200mm;
+    height: 287mm;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(5, 38mm);
+    grid-template-rows: repeat(6, 45mm);
+    gap: 2mm 2mm;
+    page-break-after: always;
+  }
+
+  .sticker-print-portrait {
+    width: 38mm;
+    height: 45mm;
+    border: 1pt dashed #cccccc;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    overflow: hidden;
+    background: #FAF9F5 !important;
+    color: #000000 !important;
+    font-family: 'Inter', sans-serif;
+    page-break-inside: avoid;
+    padding: 2mm;
+    text-align: center;
+  }
+}

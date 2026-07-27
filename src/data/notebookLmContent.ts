@@ -1,0 +1,110 @@
+export const notebookLmMarkdown = `# DOCUMENTO TÉCNICO Y CUADERNO DE CONOCIMIENTO PARA NOTEBOOKLM
+## Sistema de Gestión Integral - Frizame (Congelados Premium)
+
+### Rol y Perspectiva del Asistente
+Actúa como un Arquitecto de Software y Consultor de Negocios Senior experto en el ecosistema de Frizame - Congelados Premium. Este documento sirve como base de conocimiento consolidada para un cuaderno de NotebookLM.
+
+---
+
+### 1. Instrucciones del Sistema (System Instructions)
+- **Reglas de Comportamiento:** Asistir con máxima precisión técnica, rigor matemático y enfoque en trazabilidad alimentaria y salud financiera del negocio.
+- **Tono y Estilo:** Estructurado, profesional, ejecutivo y claro. Sin tecnicismos innecesarios pero con exactitud en las definiciones operativas.
+- **Restricciones Clave:**
+  - Los campos **peso, fecha de vencimiento y número de lote** corresponden exclusivamente a **rótulos y stickers de trazabilidad**. Se omiten automáticamente en impresiones de categoría publicitaria o marketing (A4 e Individual).
+  - Toda modificación importante en la arquitectura, datos o reglas de negocio debe verse reflejada inmediatamente en este Cuaderno de Conocimiento.
+  - La integridad de datos entre materias primas (1XX) y productos terminados (2XX) debe conservarse mediante registros auditables de fraccionamiento y el archivo de historial auditor (history.json).
+
+---
+
+### 2. Arquitectura de Datos y Rangos de Código
+El sistema organiza los códigos de producto en rangos prefijados para facilitar la identificación y segmentación:
+- **"1XX - Granel (Kg)" (Rango 100 - 199):** Productos comercializados a granel por kilos.
+- **"2XX - Bandejas" (Rango 200 - 299):** Productos fraccionados y envasados en bandejas de gramos específicos.
+- **"3XX - Marketing y Difusión" (Rango 300 - 399):** Materiales impresos, folletos, banners y recursos de difusión comercial.
+- **"4XX - Insumos y Materias Primas" (Rango 400 - 499):** Materias primas de proveedores y packaging.
+- **"500 - 999":** Rangos libres para categorías adicionales configurables.
+
+---
+
+### 3. Lógica Híbrida de Merma, Persistencia Automática y Seguridad
+- **Lógica Híbrida de Merma (Diferenciación por Solapa):**
+  - **En Fraccionamiento (Solapa 4-2):** El campo de "% Merma Operativa" carga por defecto el porcentaje 'mermaPct' configurado para la categoría destino (ej. 3.5% para Bandeja 2XX), pero permanece **editable por el operador** para registrar imprevistos o mermas excepcionales (rotura de producto, pérdidas de manipulación).
+  - **En Desglose de Costos (Solapa 5-1):** El campo de "% Merma Fija (Categoría)" es estrictamente **Read-Only (Solo Lectura)**. Recupera y muestra obligatoriamente el 'mermaPct' oficial asignado a la categoría en la configuración del sistema, garantizando que el cálculo de precio de costo, precio sugerido y márgenes de ganancia no sufran alteración o manipulación manual.
+- **Fórmula de Costo Unitario de Bandeja (2XX):**
+  $$\\text{Costo MP} = \\sum (\\text{Cantidad Insumo (g)} \\times \\text{Costo/g})$$
+  $$\\text{Costo con Merma Fija} = \\text{Costo MP} \\times \\left(1 + \\frac{\\%\\text{Merma Categoría}}{100}\\right)$$
+  $$\\text{Sobrecostos Fijos} = \\text{Flete} + \\text{Mano de Obra Directa} + \\text{Packaging} + \\text{Energía/Gas}$$
+  $$\\text{Costo Unitario Final Bandeja} = \\text{Costo con Merma Fija} + \\text{Sobrecostos Fijos}$$
+
+- **Persistencia Automática en Google Drive y Respaldo ZIP Auditoría:**
+  - En la pestaña **6. Configuración**, subpestaña **4. Base de Datos y Sistema**, se define el **Google Drive Folder ID**.
+  - Tras cada evento crítico de **Venta** o **Fraccionamiento**, el sistema genera automáticamente un paquete de respaldo comprimido en formato **.ZIP** con la nomenclatura:
+    frizame_backup_YYYYMMDD_HHMM.zip
+  - El archivo ZIP incluye todos los estados del sistema: products.json, clients.json, settings.json, history.json, movements.json, rawMaterials.json, orders.json, suppliers.json.
+
+- **Seguridad y Control de Acceso:**
+  - Para ejecutar la función **Restablecer Datos Iniciales de Fábrica** en la Solapa 6-4, el sistema requiere ingresar y validar obligatoriamente la **Contraseña de Administrador** (ej: frizame2026). Se deniega el acceso si la clave ingresada no es válida.
+
+---
+
+### 4. Estructura de Historial Auditable (history.json)
+Cada evento de Venta, Fraccionamiento, Cobro o Ajuste se registra en history.json con ID único, timestamp, usuario responsable y desglose de impacto en stock y finanzas:
+
+{
+  "id": "hist-1722026000000",
+  "timestamp": "2026-07-26T19:00:00.000Z",
+  "tipoEvento": "Fraccionamiento",
+  "usuarioResponsable": "Administrador",
+  "impactoStock": [
+    {
+      "itemId": "101",
+      "itemType": "Product",
+      "codigo": "101",
+      "nombre": "BASTONCITOS MOZZARELLA X KG",
+      "tipoStock": "GranelKg",
+      "stockAnterior": 50,
+      "stockNuevo": 40,
+      "deltaStock": -10,
+      "unidad": "Kg"
+    },
+    {
+      "itemId": "201",
+      "itemType": "Product",
+      "codigo": "201",
+      "nombre": "BASTONCITOS MOZZARELLA BANDEJA",
+      "tipoStock": "Bandejas",
+      "stockAnterior": 0,
+      "stockNuevo": 24,
+      "deltaStock": 24,
+      "unidad": "Bandejas"
+    }
+  ],
+  "impactoFinanciero": {
+    "montoTotal": 0
+  },
+  "detalles": "Fraccionamiento: BASTONCITOS MOZZARELLA (-10 Kg) ➔ BASTONCITOS MOZZARELLA BANDEJA (+24 Band.) [Merma Categoría Teórica: 3.5% | Merma Real Operativa: 5.0%]"
+}
+
+---
+
+### 5. Manual de Operaciones
+1. **Formatos de Impresión por Categoría:**
+   - **Productos:** Rótulos A4 (3x3 — 9 u), Etiqueta Individual (1 u), Stickers (5x6 — 30 u).
+   - **Materia Prima:** Rótulos A4 (3x3 — 9 u), Etiqueta Individual (1 u).
+   - **Otro / Marketing:** A4 Apaisada, A4 Vertical, Legal Apaisada, Legal Vertical.
+2. **Control de Lotes y Vencimiento Automático:**
+   - Formato de Lote: L2026-XXX.
+   - Cálculo automático de fecha de vencimiento según política de conservación a -18°C.
+3. **Sistema de Autenticación, Auditoría de Sesión y Control de Roles:**
+   - **Inicio de Sesión Unificado:** Acceso protegido mediante validación de correo electrónico y contraseña. La pantalla de login preserva la privacidad del sistema sin exponer credenciales ni listas públicas de usuarios.
+   - **Cierre de Sesión Seguro:** El botón **"Salir"** en el encabezado destruye el token de sesión activo y redirige automáticamente al usuario a la pantalla de login.
+   - **Registro de Logs de Auditoría de Usuario:** Todos los eventos de inicio/cierre de sesión, ventas, fraccionamientos y cambios de configuración quedan registrados permanentemente en el archivo auditado **'history.json'**, incluyendo el nombre y rol del usuario responsable ('usuarioResponsable').
+   - **Edición de Usuarios en Pestaña 6 (Subsolapa 6-3):** Los administradores pueden modificar los nombres, contraseñas, roles ('Administrador', 'Vendedor', 'Operador') y estado activo de los usuarios. El campo de **Correo Electrónico (Email)** se mantiene estrictamente **Inmutable (Solo Lectura)** para preservar la integridad del historial de auditoría del sistema.
+
+---
+
+### 6. Configuraciones Avanzadas
+- **Matriz de Permisos por Rol:** Administrador (Acceso total), Vendedor (Control preventas/clientes), Operador (Fraccionamiento/materia prima).
+- **Control de Inmutabilidad de Identidad:** La dirección de correo electrónico del usuario no se puede alterar una vez registrado.
+- **Respaldos ZIP Auditable:** Descarga e importación en 1 clic de archivos frizame_backup_YYYYMMDD_HHMM.zip con estado completo de la base de datos y logs de usuario.
+`;
