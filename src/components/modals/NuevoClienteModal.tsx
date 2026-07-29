@@ -20,6 +20,8 @@ export const NuevoClienteModal: React.FC<NuevoClienteModalProps> = ({
   const [canal, setCanal] = useState<'Particular' | 'Comercio' | 'Especial'>('Particular');
   const [telefono, setTelefono] = useState('');
   const [direccion, setDireccion] = useState('');
+  const [localidad, setLocalidad] = useState('');
+  const [contacto, setContacto] = useState('');
   const [observaciones, setObservaciones] = useState('');
 
   useEffect(() => {
@@ -28,12 +30,16 @@ export const NuevoClienteModal: React.FC<NuevoClienteModalProps> = ({
       setCanal(clientToEdit.canal || 'Particular');
       setTelefono(clientToEdit.telefono || '');
       setDireccion(clientToEdit.direccion || '');
+      setLocalidad(clientToEdit.localidad || '');
+      setContacto(clientToEdit.contacto || '');
       setObservaciones(clientToEdit.observaciones || '');
     } else {
       setNombre('');
       setCanal('Particular');
       setTelefono('');
       setDireccion('');
+      setLocalidad('');
+      setContacto('');
       setObservaciones('');
     }
   }, [clientToEdit, isOpen]);
@@ -60,6 +66,8 @@ export const NuevoClienteModal: React.FC<NuevoClienteModalProps> = ({
         canal,
         telefono,
         direccion,
+        localidad,
+        contacto,
         observaciones,
       });
     } else {
@@ -68,6 +76,8 @@ export const NuevoClienteModal: React.FC<NuevoClienteModalProps> = ({
         canal,
         telefono,
         direccion,
+        localidad,
+        contacto,
         observaciones,
       });
     }
@@ -75,6 +85,8 @@ export const NuevoClienteModal: React.FC<NuevoClienteModalProps> = ({
     setNombre('');
     setTelefono('');
     setDireccion('');
+    setLocalidad('');
+    setContacto('');
     setObservaciones('');
     onClose();
   };
@@ -154,15 +166,43 @@ export const NuevoClienteModal: React.FC<NuevoClienteModalProps> = ({
             </div>
           </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block font-semibold text-gray-700 mb-1">
+                Dirección de Entrega
+              </label>
+              <input
+                type="text"
+                placeholder="Av. Costanera 1420"
+                value={direccion}
+                onChange={(e) => setDireccion(e.target.value)}
+                className="w-full p-2 border border-[#D1E3EB] rounded-lg focus:outline-none focus:border-[#017E9A]"
+              />
+            </div>
+
+            <div>
+              <label className="block font-semibold text-gray-700 mb-1">
+                Localidad
+              </label>
+              <input
+                type="text"
+                placeholder="Ej: Quilmes / CABA"
+                value={localidad}
+                onChange={(e) => setLocalidad(e.target.value)}
+                className="w-full p-2 border border-[#D1E3EB] rounded-lg focus:outline-none focus:border-[#017E9A]"
+              />
+            </div>
+          </div>
+
           <div>
             <label className="block font-semibold text-gray-700 mb-1">
-              Dirección de Entrega
+              Persona / Nombre de Contacto (Opcional)
             </label>
             <input
               type="text"
-              placeholder="Av. Costanera 1420"
-              value={direccion}
-              onChange={(e) => setDireccion(e.target.value)}
+              placeholder="Ej: Juan Pérez (Encargado de Recepción)"
+              value={contacto}
+              onChange={(e) => setContacto(e.target.value)}
               className="w-full p-2 border border-[#D1E3EB] rounded-lg focus:outline-none focus:border-[#017E9A]"
             />
           </div>

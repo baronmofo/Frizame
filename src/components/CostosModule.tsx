@@ -79,6 +79,10 @@ export const CostosModule: React.FC<CostosModuleProps> = ({
   const [insumoToDelete, setInsumoToDelete] = useState<RawMaterial | null>(null);
   const [insumoToEdit, setInsumoToEdit] = useState<RawMaterial | null>(null);
 
+  // Insumo Cost Confirmation State
+  const [costToConfirm, setCostToConfirm] = useState<{ insumo: RawMaterial; oldCost: number; newCost: number } | null>(null);
+  const [editingCosts, setEditingCosts] = useState<Record<string | number, string>>({});
+
   // Supplier Tab State
   const [supplierSearchTerm, setSupplierSearchTerm] = useState('');
   const [supplierSortField, setSupplierSortField] = useState<SupplierSortField>('nombre');
@@ -582,19 +586,45 @@ export const CostosModule: React.FC<CostosModuleProps> = ({
                             </span>
                           </td>
                           <td className="p-2.5">
-                            <input
-                              type="number"
-                              disabled={ins.activo === false}
-                              value={ins.costo}
-                              onChange={(e) => {
-                                const newCost = parseFloat(e.target.value) || 0;
-                                updateRawMaterialCosto(ins.id, newCost);
-                                updateRawMaterial(ins.id, {
-                                  fechaUltimaActualizacionCosto: new Date().toISOString().split('T')[0],
-                                });
-                              }}
-                              className="w-24 p-1 border border-[#D1E3EB] rounded font-bold text-[#0B4F6C] text-xs focus:outline-none focus:border-[#017E9A] disabled:bg-gray-100 disabled:text-gray-400"
-                            />
+                            <div className="flex items-center gap-1">
+                              <span className="text-gray-400 font-bold">$</span>
+                              <input
+                                type="number"
+                                disabled={ins.activo === false}
+                                value={editingCosts[ins.id] !== undefined ? editingCosts[ins.id] : ins.costo}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setEditingCosts((prev) => ({ ...prev, [ins.id]: val }));
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    const valStr = editingCosts[ins.id];
+                                    if (valStr !== undefined) {
+                                      const numVal = parseFloat(valStr);
+                                      if (!isNaN(numVal) && numVal !== ins.costo) {
+                                        setCostToConfirm({ insumo: ins, oldCost: ins.costo, newCost: numVal });
+                                      }
+                                    }
+                                  }
+                                }}
+                                onBlur={() => {
+                                  const valStr = editingCosts[ins.id];
+                                  if (valStr !== undefined) {
+                                    const numVal = parseFloat(valStr);
+                                    if (!isNaN(numVal) && numVal !== ins.costo) {
+                                      setCostToConfirm({ insumo: ins, oldCost: ins.costo, newCost: numVal });
+                                    } else {
+                                      setEditingCosts((prev) => {
+                                        const copy = { ...prev };
+                                        delete copy[ins.id];
+                                        return copy;
+                                      });
+                                    }
+                                  }
+                                }}
+                                className="w-20 p-1 border border-[#D1E3EB] rounded font-bold text-[#0B4F6C] text-xs focus:outline-none focus:border-[#017E9A] disabled:bg-gray-100 disabled:text-gray-400"
+                              />
+                            </div>
                           </td>
                           <td className="p-2.5 text-center">
                             <div className="flex items-center justify-center gap-1">
@@ -1215,6 +1245,46 @@ export const CostosModule: React.FC<CostosModuleProps> = ({
         title="Confirmar Modificación de Precios de Venta"
         message={`¿Está seguro de guardar los nuevos precios de venta para [${selectedProduct?.codigo}] ${selectedProduct?.nombre}? Se actualizará el catálogo y las listas de precios en todo el sistema.`}
         confirmText="Aprobar y Guardar Precios"
+      />
+
+      {/* Confirmation Modal for Insumo Cost Changes */}
+      <ConfirmModal
+        isOpen={!!costToConfirm}
+        onClose={() => {
+          if (costToConfirm) {
+            setEditingCosts((prev) => {
+              const copy = { ...prev };
+              delete copy[costToConfirm.insumo.id];
+              return copy;
+            });
+          }
+          setCostToConfirm(null);
+        }}
+        onConfirm={() => {
+          if (costToConfirm) {
+            updateRawMaterialCosto(costToConfirm.insumo.id, costToConfirm.newCost);
+            updateRawMaterial(costToConfirm.insumo.id, {
+              fechaUltimaActualizacionCosto: new Date().toISOString().split('T')[0],
+            });
+            setEditingCosts((prev) => {
+              const copy = { ...prev };
+              delete copy[costToConfirm.insumo.id];
+              return copy;
+            });
+            setInsumoNoticeMessage(
+              `¡Costo del insumo [${costToConfirm.insumo.codigo || costToConfirm.insumo.id}] "${costToConfirm.insumo.nombre}" actualizado correctamente a $${costToConfirm.newCost.toLocaleString('es-AR')}!`
+            );
+            setCostToConfirm(null);
+          }
+        }}
+        title="Confirmar Cambio de Costo de Insumo"
+        message={
+          <span>
+            ¿Desea actualizar el costo del insumo <strong>[{costToConfirm?.insumo.codigo || costToConfirm?.insumo.id}] {costToConfirm?.insumo.nombre}</strong> de <strong>${costToConfirm?.oldCost.toLocaleString('es-AR')}</strong> a <strong>${costToConfirm?.newCost.toLocaleString('es-AR')}</strong>?
+          </span>
+        }
+        confirmText="Guardar Nuevo Costo"
+        cancelText="Cancelar"
       />
 
       {/* Confirmation Modal for Insumo Deletion */}

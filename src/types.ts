@@ -63,6 +63,8 @@ export interface Client {
   canal: SaleChannel;
   telefono: string;
   direccion: string;
+  localidad?: string;
+  contacto?: string;
   saldo: number;
   historial: ClientHistory[];
   observaciones?: string;
@@ -113,6 +115,8 @@ export interface OrderOP {
   clientNombre: string;
   clientTelefono: string;
   clientDireccion: string;
+  clientLocalidad?: string;
+  clientContacto?: string;
   canal: SaleChannel;
   items: CartItem[];
   subtotal: number;

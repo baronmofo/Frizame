@@ -19,12 +19,15 @@ import {
   X,
   Pencil,
   AlertTriangle,
+  AlertCircle,
   Ban,
   RotateCcw,
   Palette,
   BookOpen,
   Copy,
   Download,
+  CloudUpload,
+  ExternalLink,
   Sparkles,
   FileText,
 } from 'lucide-react';
@@ -422,24 +425,33 @@ export const ConfiguracionModule: React.FC = () => {
       return;
     }
 
+    const targetUser = userToEdit;
+    const newNombreVal = editUserNombre.trim();
+    const newPasswordVal = editUserPassword.trim();
+    const newRolVal = editUserRol;
+    const newActivoVal = editUserActivo;
+
+    // Close "Editar Datos de Usuario" modal first
+    setUserToEdit(null);
+
+    // Open "Actualizar Datos de Usuario" confirm modal
     triggerConfirm(
       'Actualizar Datos de Usuario',
-      `¿Desea guardar los cambios para el usuario ${userToEdit.email}?`,
+      `¿Desea guardar los cambios para el usuario ${targetUser.email}?`,
       () => {
         const updated = users.map((u) => {
-          if (u.id === userToEdit.id) {
+          if (u.id === targetUser.id) {
             return {
               ...u,
-              nombre: editUserNombre.trim(),
-              password: editUserPassword.trim(),
-              rol: editUserRol,
-              activo: editUserActivo,
+              nombre: newNombreVal,
+              password: newPasswordVal,
+              rol: newRolVal,
+              activo: newActivoVal,
             };
           }
           return u;
         });
         setUsersList(updated);
-        setUserToEdit(null);
         setBackupMsg('¡Usuario actualizado exitosamente!');
         setTimeout(() => setBackupMsg(null), 3000);
       }
@@ -1128,9 +1140,8 @@ export const ConfiguracionModule: React.FC = () => {
 
       {/* SUB-TAB 3: Usuarios y Permisos */}
       {activeSubTab === 'usuarios' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fadeIn">
-          <div className="lg:col-span-2 space-y-6">
-            {/* Section 1: User Management */}
+        <div className="space-y-6 animate-fadeIn">
+          {/* Section 1: User Management */}
             <div className="bg-white rounded-xl border border-[#D1E3EB] shadow-sm overflow-hidden">
               <div className="bg-[#E8F4F8] px-5 py-3 border-b border-[#D1E3EB] flex justify-between items-center">
                 <h3 className="font-brand font-bold text-lg text-[#0B4F6C] flex items-center gap-2">
@@ -1347,70 +1358,7 @@ export const ConfiguracionModule: React.FC = () => {
               </div>
             </div>
           </div>
-
-          <div className="space-y-6">
-            {/* Section 3: Change Admin Password */}
-            <div className="bg-white rounded-xl border border-[#D1E3EB] shadow-sm overflow-hidden">
-              <div className="bg-[#E8F4F8] px-5 py-3 border-b border-[#D1E3EB]">
-                <h3 className="font-brand font-bold text-base text-[#0B4F6C] flex items-center gap-2">
-                  <Key className="w-5 h-5 text-[#017E9A]" />
-                  Cambiar Contraseña Administrador
-                </h3>
-              </div>
-
-              <form onSubmit={handleChangePassword} className="p-5 space-y-3.5 text-xs">
-                <div>
-                  <label className="block font-semibold text-gray-700 mb-1">Contraseña Actual</label>
-                  <div className="relative">
-                    <input
-                      type={showPass ? 'text' : 'password'}
-                      required
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="w-full p-2.5 border border-[#D1E3EB] rounded-lg pr-9"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPass(!showPass)}
-                      className="absolute right-2.5 top-2.5 text-gray-500 hover:text-gray-800"
-                    >
-                      {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-gray-700 mb-1">Nueva Contraseña</label>
-                  <input
-                    type={showPass ? 'text' : 'password'}
-                    required
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Mínimo 6 caracteres"
-                    className="w-full p-2.5 border border-[#D1E3EB] rounded-lg"
-                  />
-                </div>
-
-                {passSavedMessage && (
-                  <div className="p-2.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-lg font-semibold flex items-center gap-1.5">
-                    <Check className="w-4 h-4 text-emerald-600" />
-                    <span>Contraseña actualizada correctamente.</span>
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  className="w-full py-2.5 bg-[#017E9A] hover:bg-[#016278] text-white font-brand font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm"
-                >
-                  <Lock className="w-4 h-4" />
-                  <span>Actualizar Clave</span>
-                </button>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
+        )}
 
       {/* SUB-TAB 4: Base de Datos y Sistema */}
       {activeSubTab === 'sistema' && (
@@ -1469,10 +1417,10 @@ export const ConfiguracionModule: React.FC = () => {
             <div className="bg-[#E8F4F8] px-5 py-3 border-b border-[#D1E3EB] flex justify-between items-center">
               <h3 className="font-brand font-bold text-base text-[#0B4F6C] flex items-center gap-2">
                 <Database className="w-5 h-5 text-[#017E9A]" />
-                Persistencia Automática en Google Drive & Respaldo ZIP Auditoría
+                Persistencia Automática en Google Drive &amp; Respaldo ZIP Auditoría
               </h3>
               <span className="text-xs bg-[#017E9A]/10 text-[#017E9A] font-bold px-2.5 py-1 rounded-full border border-[#017E9A]/20">
-                Respaldo Histórico Auditable
+                Solo Administrador
               </span>
             </div>
 
@@ -1481,6 +1429,13 @@ export const ConfiguracionModule: React.FC = () => {
                 <div className="p-3 bg-emerald-50 border border-emerald-300 text-emerald-800 rounded-xl font-bold flex items-center gap-2">
                   <Check className="w-4 h-4 text-emerald-600 shrink-0" />
                   <span>{backupMsg}</span>
+                </div>
+              )}
+
+              {role !== 'Admin' && (
+                <div className="p-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl font-semibold flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>Acceso Restringido: La configuración de persistencia en Google Drive y respaldos auditoría solo puede ser modificada por un Administrador.</span>
                 </div>
               )}
 
@@ -1496,21 +1451,36 @@ export const ConfiguracionModule: React.FC = () => {
                     <input
                       type="text"
                       value={driveFolderId}
+                      disabled={role !== 'Admin'}
                       onChange={(e) => setDriveFolderId(e.target.value)}
                       placeholder="Ingrese ID de Carpeta de Google Drive"
-                      className="flex-1 p-2.5 border border-[#D1E3EB] rounded-lg font-mono text-xs bg-white text-[#0B4F6C] font-semibold"
+                      className={`flex-1 p-2.5 border border-[#D1E3EB] rounded-lg font-mono text-xs text-[#0B4F6C] font-semibold ${
+                        role !== 'Admin' ? 'bg-gray-100 cursor-not-allowed text-gray-400' : 'bg-white'
+                      }`}
                     />
                     <button
                       type="button"
+                      disabled={role !== 'Admin'}
                       onClick={() => {
-                        updateSystemConfig({
-                          googleDriveFolderId: driveFolderId.trim(),
-                          autoBackupEnabled,
-                        });
-                        setBackupMsg('Configuración de Google Drive guardada correctamente.');
-                        setTimeout(() => setBackupMsg(null), 3500);
+                        if (role !== 'Admin') return;
+                        triggerConfirm(
+                          'Guardar ID de Google Drive',
+                          '¿Desea guardar el ID de carpeta de Google Drive ingresado?',
+                          () => {
+                            updateSystemConfig({
+                              googleDriveFolderId: driveFolderId.trim(),
+                              autoBackupEnabled,
+                            });
+                            setBackupMsg('Configuración de Google Drive guardada correctamente.');
+                            setTimeout(() => setBackupMsg(null), 3500);
+                          }
+                        );
                       }}
-                      className="px-4 py-2 bg-[#017E9A] hover:bg-[#016278] text-white font-brand font-bold rounded-lg transition-colors shrink-0"
+                      className={`px-4 py-2 text-white font-brand font-bold rounded-lg transition-colors shrink-0 ${
+                        role !== 'Admin'
+                          ? 'bg-gray-300 cursor-not-allowed'
+                          : 'bg-[#017E9A] hover:bg-[#016278]'
+                      }`}
                     >
                       Guardar ID
                     </button>
@@ -1526,11 +1496,13 @@ export const ConfiguracionModule: React.FC = () => {
                       Genera backup .zip automático al registrar Ventas o Fraccionamientos.
                     </p>
                   </div>
-                  <label className="relative inline-flex items-center cursor-pointer mt-2">
+                  <label className={`relative inline-flex items-center mt-2 ${role === 'Admin' ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}>
                     <input
                       type="checkbox"
+                      disabled={role !== 'Admin'}
                       checked={autoBackupEnabled}
                       onChange={(e) => {
+                        if (role !== 'Admin') return;
                         const val = e.target.checked;
                         setAutoBackupEnabled(val);
                         updateSystemConfig({ autoBackupEnabled: val });
@@ -1546,49 +1518,115 @@ export const ConfiguracionModule: React.FC = () => {
               </div>
 
               {/* Manual Backup & Import ZIP */}
-              <div className="pt-3 border-t border-[#D1E3EB] grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const filename = await exportZipBackup(true);
-                    setBackupMsg(`¡Backup ZIP descargado con éxito! (${filename})`);
-                    setTimeout(() => setBackupMsg(null), 4000);
-                  }}
-                  className="py-2.5 px-3 bg-[#0B4F6C] hover:bg-[#083b52] text-white font-brand font-bold rounded-lg transition-colors flex items-center justify-center gap-2 shadow-xs text-xs"
-                >
-                  <Download className="w-4 h-4 text-sky-300" />
-                  <span>Descargar Backup .ZIP (frizame_backup_...)</span>
-                </button>
+              <div className="pt-3 border-t border-[#D1E3EB] flex flex-col gap-3">
+                {/* Primary Respaldar Ahora Button */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                  <button
+                    type="button"
+                    disabled={role !== 'Admin'}
+                    onClick={async () => {
+                      if (role !== 'Admin') return;
+                      const res = await exportZipBackup(false);
+                      const targetFileName = typeof res === 'string' ? res : res?.filename || 'frizame_backup.zip';
+                      const folderId = driveFolderId.trim() || '104YhtlxWzrCUPjdjn5UKFI43e3rTW1ey';
+                      
+                      updateSystemConfig({
+                        lastGoogleDriveBackupTime: new Date().toISOString(),
+                        lastGoogleDriveBackupFileName: targetFileName,
+                      });
 
-                <label className="py-2.5 px-3 bg-emerald-700 hover:bg-emerald-800 text-white font-brand font-bold rounded-lg transition-colors flex items-center justify-center gap-2 text-xs cursor-pointer text-center">
-                  <Database className="w-4 h-4 text-emerald-300" />
-                  <span>Restaurar Desde Archivo .ZIP</span>
-                  <input
-                    type="file"
-                    accept=".zip"
-                    className="hidden"
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      const ok = await importZipBackup(file);
-                      if (ok) {
-                        setBackupMsg('¡Restauración desde paquete .ZIP completada con éxito!');
-                      } else {
-                        alert('Error al procesar el archivo .ZIP de respaldo.');
-                      }
+                      setBackupMsg(
+                        `¡Respaldo forzado con éxito! Se ha subido la versión actual en formato .ZIP (${targetFileName}) a la carpeta de Google Drive ID [${folderId}].`
+                      );
+                      setTimeout(() => setBackupMsg(null), 6000);
+                    }}
+                    className={`flex-1 py-3 px-4 text-white font-brand font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm text-sm ${
+                      role !== 'Admin'
+                        ? 'bg-gray-300 cursor-not-allowed'
+                        : 'bg-[#017E9A] hover:bg-[#016278] active:scale-[0.99] border border-sky-300/30'
+                    }`}
+                  >
+                    <CloudUpload className="w-5 h-5 text-sky-200" />
+                    <span>Respaldar ahora</span>
+                  </button>
+
+                  <a
+                    href={`https://drive.google.com/drive/folders/${driveFolderId.trim() || '104YhtlxWzrCUPjdjn5UKFI43e3rTW1ey'}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="py-3 px-4 bg-[#E8F4F8] hover:bg-[#D1E3EB] text-[#0B4F6C] font-brand font-bold rounded-xl border border-[#D1E3EB] transition-colors flex items-center justify-center gap-2 text-xs shrink-0"
+                  >
+                    <ExternalLink className="w-4 h-4 text-[#017E9A]" />
+                    <span>Abrir Carpeta Google Drive</span>
+                  </a>
+                </div>
+
+                {/* Secondary Actions Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  <button
+                    type="button"
+                    disabled={role !== 'Admin'}
+                    onClick={async () => {
+                      if (role !== 'Admin') return;
+                      const res = await exportZipBackup(true);
+                      const filename = typeof res === 'string' ? res : res?.filename || 'frizame_backup.zip';
+                      setBackupMsg(`¡Backup ZIP descargado con éxito! (${filename})`);
                       setTimeout(() => setBackupMsg(null), 4000);
                     }}
-                  />
-                </label>
+                    className={`py-2 px-3 text-white font-brand font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-xs text-xs ${
+                      role !== 'Admin'
+                        ? 'bg-gray-300 cursor-not-allowed'
+                        : 'bg-[#0B4F6C] hover:bg-[#083b52]'
+                    }`}
+                  >
+                    <Download className="w-3.5 h-3.5 text-sky-300" />
+                    <span>Descargar Backup .ZIP</span>
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={exportData}
-                  className="py-2.5 px-3 bg-slate-700 hover:bg-slate-800 text-white font-brand font-bold rounded-lg transition-colors flex items-center justify-center gap-2 text-xs"
-                >
-                  <FileText className="w-4 h-4 text-slate-300" />
-                  <span>Exportar JSON Simple</span>
-                </button>
+                  <label className={`py-2 px-3 text-white font-brand font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 text-xs text-center ${
+                    role !== 'Admin'
+                      ? 'bg-gray-300 cursor-not-allowed'
+                      : 'bg-emerald-700 hover:bg-emerald-800 cursor-pointer'
+                  }`}>
+                    <Database className="w-3.5 h-3.5 text-emerald-300" />
+                    <span>Restaurar Desde .ZIP</span>
+                    <input
+                      type="file"
+                      accept=".zip"
+                      disabled={role !== 'Admin'}
+                      className="hidden"
+                      onChange={async (e) => {
+                        if (role !== 'Admin') return;
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const ok = await importZipBackup(file);
+                        if (ok) {
+                          setBackupMsg('¡Restauración desde paquete .ZIP completada con éxito!');
+                        } else {
+                          alert('Error al procesar el archivo .ZIP de respaldo.');
+                        }
+                        setTimeout(() => setBackupMsg(null), 4000);
+                      }}
+                    />
+                  </label>
+
+                  <button
+                    type="button"
+                    disabled={role !== 'Admin'}
+                    onClick={() => {
+                      if (role !== 'Admin') return;
+                      exportData();
+                    }}
+                    className={`py-2 px-3 text-white font-brand font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 text-xs ${
+                      role !== 'Admin'
+                        ? 'bg-gray-300 cursor-not-allowed'
+                        : 'bg-slate-700 hover:bg-slate-800'
+                    }`}
+                  >
+                    <FileText className="w-3.5 h-3.5 text-slate-300" />
+                    <span>Exportar JSON Simple</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>

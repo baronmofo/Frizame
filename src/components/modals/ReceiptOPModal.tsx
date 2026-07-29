@@ -117,7 +117,12 @@ export const ReceiptOPModal: React.FC<ReceiptOPModalProps> = ({ isOpen, onClose,
                 <p className="text-gray-600">Tel: {order.clientTelefono}</p>
               )}
               {order.clientDireccion && (
-                <p className="text-gray-600">Dir: {order.clientDireccion}</p>
+                <p className="text-gray-600">
+                  Dir: {order.clientDireccion}{order.clientLocalidad ? `, ${order.clientLocalidad}` : ''}
+                </p>
+              )}
+              {order.clientContacto && (
+                <p className="text-gray-600">Contacto: {order.clientContacto}</p>
               )}
             </div>
 

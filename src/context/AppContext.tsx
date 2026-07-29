@@ -127,12 +127,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (saved) {
       try {
         const loaded: Product[] = JSON.parse(saved).products || initialProducts;
-        return loaded.filter((p) => String(p.codigo).startsWith('1') || String(p.codigo).startsWith('2'));
+        return loaded
+          .filter((p) => String(p.codigo).startsWith('1') || String(p.codigo).startsWith('2'))
+          .map((p) => ({ ...p, stockGranelKg: 0, stockBandejas: 0 }));
       } catch (e) {
         console.error(e);
       }
     }
-    return initialProducts.filter((p) => String(p.codigo).startsWith('1') || String(p.codigo).startsWith('2'));
+    return initialProducts
+      .filter((p) => String(p.codigo).startsWith('1') || String(p.codigo).startsWith('2'))
+      .map((p) => ({ ...p, stockGranelKg: 0, stockBandejas: 0 }));
   });
 
   const [clients, setClients] = useState<Client[]>(() => {
@@ -147,22 +151,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [movements, setMovements] = useState<Movement[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        const loaded: Movement[] = JSON.parse(saved).movements || initialMovements;
-        return loaded.filter((m) => m.tipo !== 'Salida Preventa');
-      } catch (e) { console.error(e); }
-    }
-    return initialMovements.filter((m) => m.tipo !== 'Salida Preventa');
+    return [];
   });
 
   const [rawMaterials, setRawMaterials] = useState<RawMaterial[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
-      try { return JSON.parse(saved).rawMaterials || initialRawMaterials; } catch (e) { console.error(e); }
+      try {
+        const loaded: RawMaterial[] = JSON.parse(saved).rawMaterials || initialRawMaterials;
+        return loaded.map((r) => ({ ...r, stock: 0 }));
+      } catch (e) { console.error(e); }
     }
-    return initialRawMaterials;
+    return initialRawMaterials.map((r) => ({ ...r, stock: 0 }));
   });
 
   const [recipes, setRecipes] = useState<Recipe[]>(() => {
@@ -594,6 +594,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       clientNombre: client.nombre,
       clientTelefono: client.telefono || '',
       clientDireccion: client.direccion || '',
+      clientLocalidad: client.localidad || '',
+      clientContacto: client.contacto || '',
       canal,
       items,
       subtotal,
@@ -699,6 +701,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       clientNombre: client.nombre,
       clientTelefono: client.telefono || '',
       clientDireccion: client.direccion || '',
+      clientLocalidad: client.localidad || '',
+      clientContacto: client.contacto || '',
       canal: updatedData.canal,
       items: updatedData.items,
       subtotal,
@@ -933,13 +937,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Add Client
-  const addClient = (clientData: { nombre: string; canal: 'Particular' | 'Comercio' | 'Especial'; telefono: string; direccion: string; observaciones?: string }) => {
+  const addClient = (clientData: { nombre: string; canal: 'Particular' | 'Comercio' | 'Especial'; telefono: string; direccion: string; localidad?: string; contacto?: string; observaciones?: string }) => {
     const newClient: Client = {
       id: Date.now(),
       nombre: clientData.nombre,
       canal: clientData.canal,
       telefono: clientData.telefono,
       direccion: clientData.direccion,
+      localidad: clientData.localidad || '',
+      contacto: clientData.contacto || '',
       saldo: 0,
       historial: [],
       observaciones: clientData.observaciones || '',
@@ -948,7 +954,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Update Client
-  const updateClient = (id: number | string, clientData: { nombre: string; canal: 'Particular' | 'Comercio' | 'Especial'; telefono: string; direccion: string; observaciones?: string }) => {
+  const updateClient = (id: number | string, clientData: { nombre: string; canal: 'Particular' | 'Comercio' | 'Especial'; telefono: string; direccion: string; localidad?: string; contacto?: string; observaciones?: string }) => {
     setClients((prev) =>
       prev.map((c) =>
         c.id === id || String(c.id) === String(id)
@@ -958,6 +964,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               canal: clientData.canal,
               telefono: clientData.telefono,
               direccion: clientData.direccion,
+              localidad: clientData.localidad || '',
+              contacto: clientData.contacto || '',
               observaciones: clientData.observaciones || '',
             }
           : c
@@ -1014,30 +1022,62 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Raw Materials / Insumos ABM
   const addRawMaterial = (insumoData: Partial<RawMaterial>) => {
+    const todayStr = new Date().toISOString().split('T')[0];
     const newMat: RawMaterial = {
       id: Date.now(),
+      codigo: insumoData.codigo || String(Date.now()),
+      categoria: insumoData.categoria || 'Insumo',
       nombre: insumoData.nombre || 'Nuevo Insumo',
-      proveedor: insumoData.proveedor || '',
-      marca: insumoData.marca || '',
+      proveedor: insumoData.proveedor || 'General',
+      marca: insumoData.marca || 'Marca Propia',
       presentacion: insumoData.presentacion || 'Unidad',
+      unidadMedida: insumoData.unidadMedida || insumoData.unidad || 'u.',
+      umPorPresentacion: insumoData.umPorPresentacion || 1,
       costo: insumoData.costo || 0,
       costoUnidad: insumoData.costoUnidad || insumoData.costo || 0,
       unidad: insumoData.unidad || 'u.',
       stock: insumoData.stock || 0,
-      stockMinimo: insumoData.stockMinimo || 5,
-      stockMaximo: insumoData.stockMaximo || 100,
+      stockMinimo: insumoData.stockMinimo !== undefined ? insumoData.stockMinimo : 5,
+      stockMaximo: insumoData.stockMaximo !== undefined ? insumoData.stockMaximo : 100,
+      fechaUltimaActualizacionCosto: insumoData.fechaUltimaActualizacionCosto || todayStr,
+      activo: insumoData.activo !== undefined ? insumoData.activo : true,
     };
     setRawMaterials((prev) => [...prev, newMat]);
   };
 
   const updateRawMaterial = (id: number | string, updated: Partial<RawMaterial>) => {
+    const todayStr = new Date().toISOString().split('T')[0];
     setRawMaterials((prev) =>
-      prev.map((m) => (m.id === id || String(m.id) === String(id) ? { ...m, ...updated } : m))
+      prev.map((m) => {
+        if (m.id === id || String(m.id) === String(id)) {
+          const isCostChanged = updated.costo !== undefined && updated.costo !== m.costo;
+          return {
+            ...m,
+            ...updated,
+            fechaUltimaActualizacionCosto:
+              updated.fechaUltimaActualizacionCosto ||
+              (isCostChanged ? todayStr : (m.fechaUltimaActualizacionCosto || todayStr)),
+          };
+        }
+        return m;
+      })
     );
   };
 
   const updateRawMaterialCosto = (id: number | string, costo: number) => {
-    setRawMaterials((prev) => prev.map((m) => (m.id === id || String(m.id) === String(id) ? { ...m, costo, costoUnidad: costo } : m)));
+    const todayStr = new Date().toISOString().split('T')[0];
+    setRawMaterials((prev) =>
+      prev.map((m) =>
+        m.id === id || String(m.id) === String(id)
+          ? {
+              ...m,
+              costo,
+              costoUnidad: m.umPorPresentacion && m.umPorPresentacion > 0 ? Math.round((costo / m.umPorPresentacion) * 100) / 100 : costo,
+              fechaUltimaActualizacionCosto: todayStr,
+            }
+          : m
+      )
+    );
   };
 
   const deleteRawMaterial = (id: number | string) => {
@@ -1529,10 +1569,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const resetData = () => {
-    setProducts(initialProducts.filter((p) => String(p.codigo).startsWith('1') || String(p.codigo).startsWith('2')));
+    setProducts(
+      initialProducts
+        .filter((p) => String(p.codigo).startsWith('1') || String(p.codigo).startsWith('2'))
+        .map((p) => ({ ...p, stockGranelKg: 0, stockBandejas: 0 }))
+    );
     setClients(initialClients.map((c) => ({ ...c, saldo: 0, historial: [] })));
     setMovements([]);
-    setRawMaterials(initialRawMaterials);
+    setRawMaterials(initialRawMaterials.map((r) => ({ ...r, stock: 0 })));
     setRecipes(initialRecipes);
     setOrdersOP([]);
     setSuppliers(initialSuppliers.map((s) => ({ ...s, saldo: 0, historial: [] })));

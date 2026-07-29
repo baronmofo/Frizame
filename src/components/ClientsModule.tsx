@@ -133,8 +133,8 @@ export const ClientsModule: React.FC<ClientsModuleProps> = ({
       {/* Grid Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Clients List Card */}
-        <div className="bg-white rounded-xl border border-[#D1E3EB] shadow-sm overflow-hidden flex flex-col">
-          <div className="bg-[#E8F4F8] px-5 py-3 border-b border-[#D1E3EB] flex flex-wrap items-center justify-between gap-2">
+        <div className="bg-white rounded-xl border border-[#D1E3EB] shadow-sm overflow-hidden flex flex-col h-[580px]">
+          <div className="bg-[#E8F4F8] px-5 py-3 border-b border-[#D1E3EB] flex flex-wrap items-center justify-between gap-2 shrink-0">
             <div className="flex items-center gap-2">
               <h3 className="font-brand font-bold text-lg text-[#0B4F6C] flex items-center gap-2">
                 <Users className="w-5 h-5 text-[#017E9A]" />
@@ -163,7 +163,7 @@ export const ClientsModule: React.FC<ClientsModuleProps> = ({
             </div>
           </div>
 
-          <div className="p-3 overflow-x-auto max-h-[540px] overflow-y-auto">
+          <div className="p-3 overflow-x-auto overflow-y-auto flex-1">
             <table className="w-full text-left text-xs md:text-sm border-collapse">
               <thead className="sticky top-0 bg-[#E8F4F8] z-10">
                 <tr className="text-[#0B4F6C] font-brand border-b border-[#D1E3EB]">
@@ -221,7 +221,12 @@ export const ClientsModule: React.FC<ClientsModuleProps> = ({
                       >
                         <td className="p-2.5">
                           <strong className="text-gray-800 block">{c.nombre}</strong>
-                          <small className="text-gray-500 text-[11px] block">{c.direccion || 'Sin dirección'}</small>
+                          <small className="text-gray-500 text-[11px] block">
+                            {c.direccion ? `${c.direccion}${c.localidad ? `, ${c.localidad}` : ''}` : 'Sin dirección'}
+                          </small>
+                          {c.contacto && (
+                            <small className="text-gray-400 text-[10px] block italic">Contacto: {c.contacto}</small>
+                          )}
                         </td>
                         <td className="p-2.5">
                           <span className="bg-[#E8F4F8] text-[#0B4F6C] px-2 py-0.5 rounded text-[11px] font-semibold border border-[#D1E3EB]">
@@ -282,8 +287,8 @@ export const ClientsModule: React.FC<ClientsModuleProps> = ({
         </div>
 
         {/* Selected Client Ledger & MP QR Card */}
-        <div className="bg-white rounded-xl border border-[#D1E3EB] shadow-sm overflow-hidden">
-          <div className="bg-[#E8F4F8] px-5 py-3 border-b border-[#D1E3EB] flex items-center justify-between">
+        <div className="bg-white rounded-xl border border-[#D1E3EB] shadow-sm overflow-hidden flex flex-col h-[580px]">
+          <div className="bg-[#E8F4F8] px-5 py-3 border-b border-[#D1E3EB] flex items-center justify-between shrink-0">
             <h3 className="font-brand font-bold text-lg text-[#0B4F6C] flex items-center gap-2">
               <Receipt className="w-5 h-5 text-[#017E9A]" />
               Cuenta Corriente:{' '}
@@ -303,7 +308,7 @@ export const ClientsModule: React.FC<ClientsModuleProps> = ({
             )}
           </div>
 
-          <div className="p-5 space-y-6">
+          <div className="p-5 space-y-6 flex-1 overflow-y-auto">
             {selectedClient ? (
               <>
                 {/* Balance Summary Header */}
@@ -347,6 +352,20 @@ export const ClientsModule: React.FC<ClientsModuleProps> = ({
                       <span>Registrar Pago</span>
                     </button>
                   </div>
+                </div>
+
+                {/* Delivery Address, Localidad & Contact Person */}
+                <div className="bg-[#F4F8FA] border border-[#D1E3EB] p-3 rounded-xl text-xs text-gray-700 space-y-1">
+                  <div>
+                    <span className="font-bold text-[#0B4F6C]">Dirección de Entrega: </span>
+                    <span>{selectedClient.direccion ? `${selectedClient.direccion}${selectedClient.localidad ? `, ${selectedClient.localidad}` : ''}` : 'No registrada'}</span>
+                  </div>
+                  {selectedClient.contacto && (
+                    <div>
+                      <span className="font-bold text-[#0B4F6C]">Persona de Contacto: </span>
+                      <span>{selectedClient.contacto}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Internal Observations if available */}

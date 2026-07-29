@@ -9,6 +9,7 @@ import { FraccionamientoModule } from './components/FraccionamientoModule';
 import { CostosModule } from './components/CostosModule';
 import { ConfiguracionModule } from './components/ConfiguracionModule';
 import { PrintA4Sheet } from './components/PrintA4Sheet';
+import { BookOpen } from 'lucide-react';
 
 // Modals
 import { VentaModal } from './components/modals/VentaModal';
@@ -19,6 +20,7 @@ import { RegistrarPagoModal } from './components/modals/RegistrarPagoModal';
 import { NuevoInsumoModal } from './components/modals/NuevoInsumoModal';
 import { NuevaRecetaModal } from './components/modals/NuevaRecetaModal';
 import { NuevoProductoModal } from './components/modals/NuevoProductoModal';
+import { UserManualModal } from './components/modals/UserManualModal';
 import { LoginScreen } from './components/LoginScreen';
 import { OrderOP, Client, Product } from './types';
 
@@ -27,6 +29,13 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState<string>('mod-dashboard');
   const [costosSubTab, setCostosSubTab] = useState<'INSUMOS' | 'PROVEEDORES'>('INSUMOS');
   const [selectedClientId, setSelectedClientId] = useState<number | string | null>(null);
+
+  // Always navigate to Dashboard upon login
+  useEffect(() => {
+    if (isLoggedIn) {
+      setActiveTab('mod-dashboard');
+    }
+  }, [isLoggedIn]);
 
   // Dynamic Theme palette effect across all pages
   useEffect(() => {
@@ -95,6 +104,9 @@ function AppContent() {
 
   const [isNuevoProductoModalOpen, setIsNuevoProductoModalOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState<Product | null>(null);
+
+  // User Manual Modal State
+  const [isUserManualOpen, setIsUserManualOpen] = useState(false);
 
   // Printable A4 Label config
   const [printLabelConfig, setPrintLabelConfig] = useState<any>(null);
@@ -244,18 +256,27 @@ function AppContent() {
       </main>
 
       {/* Footer */}
-      <footer className="no-print bg-[#0B4F6C] text-white/80 py-4 px-4 border-t border-[#017E9A]/30 mt-auto text-xs text-center font-medium">
+      <footer className="no-print bg-[#0B4F6C] text-white/80 py-3.5 px-4 border-t border-[#017E9A]/30 mt-auto text-xs text-center font-medium">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
           <span>
             <strong>Frizame - Congelados Premium</strong> &copy; {new Date().getFullYear()} • Sistema de Gestión Integral
           </span>
-          <span className="text-sky-200 text-[11px]">
-            Trazabilidad, Rótulos A4, Control Granel/Bandejas &amp; Cuentas Corrientes
-          </span>
+          <button
+            type="button"
+            onClick={() => setIsUserManualOpen(true)}
+            className="text-sky-200 hover:text-white underline decoration-sky-400 font-bold text-xs flex items-center gap-1.5 cursor-pointer bg-sky-900/50 hover:bg-sky-800 px-3 py-1 rounded-lg border border-sky-400/30 transition-all shadow-2xs"
+          >
+            <BookOpen className="w-3.5 h-3.5 text-sky-300" />
+            <span>Manual de usuario</span>
+          </button>
         </div>
       </footer>
 
       {/* Modals */}
+      <UserManualModal
+        isOpen={isUserManualOpen}
+        onClose={() => setIsUserManualOpen(false)}
+      />
       <VentaModal
         isOpen={isVentaModalOpen}
         onClose={() => setIsVentaModalOpen(false)}
