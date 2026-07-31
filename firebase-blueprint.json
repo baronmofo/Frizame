@@ -2,68 +2,177 @@
   "entities": {
     "Product": {
       "title": "Product",
-      "description": "Frizame frozen food product item (1xx granel or 2xx bandeja)",
+      "description": "Finished product or raw material item",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "codigo": { "type": "string" },
+        "id_unico": { "type": "string" },
         "nombre": { "type": "string" },
         "tipo": { "type": "string" },
-        "pesoGrs": { "type": "number" },
-        "costo": { "type": "number" },
-        "precioComercio": { "type": "number" },
-        "precioParticular": { "type": "number" },
-        "stockGranelKg": { "type": "number" },
-        "stockBandejas": { "type": "number" },
-        "grsPorBandeja": { "type": "number" },
-        "ingredientes": { "type": "string" },
-        "alergenos": { "type": "string" },
-        "conservacion": { "type": "string" },
-        "activo": { "type": "boolean" }
+        "stock": { "type": "number" },
+        "costo_unitario": { "type": "number" },
+        "precio_venta": { "type": "number" },
+        "updatedAt": { "type": "string" }
       },
-      "required": ["codigo", "nombre", "tipo", "costo", "precioComercio", "precioParticular"]
+      "required": ["id", "nombre"]
     },
-    "SystemUser": {
-      "title": "SystemUser",
-      "description": "System access user profile with assigned role",
+    "Client": {
+      "title": "Client",
+      "description": "Customer record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nombre": { "type": "string" },
+        "cuit": { "type": "string" },
+        "email": { "type": "string" },
+        "telefono": { "type": "string" },
+        "direccion": { "type": "string" }
+      },
+      "required": ["id", "nombre"]
+    },
+    "StockMovement": {
+      "title": "StockMovement",
+      "description": "Stock transaction record for audit and tracking",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "fecha": { "type": "string" },
+        "tipo": { "type": "string", "enum": ["Venta", "Ingreso", "Fraccionamiento", "Ajuste"] },
+        "productoId": { "type": "string" },
+        "cantidad": { "type": "number" },
+        "monto": { "type": "number" },
+        "usuario": { "type": "string" }
+      },
+      "required": ["id", "fecha", "tipo", "productoId", "cantidad"]
+    },
+    "RawMaterial": {
+      "title": "RawMaterial",
+      "description": "Materia prima inventory item",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nombre": { "type": "string" },
+        "unidad": { "type": "string" },
+        "stock": { "type": "number" },
+        "costoUnitario": { "type": "number" }
+      },
+      "required": ["id", "nombre"]
+    },
+    "Recipe": {
+      "title": "Recipe",
+      "description": "Production recipe formula",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nombre": { "type": "string" },
+        "productoFinalId": { "type": "string" },
+        "ingredientes": { "type": "array" }
+      },
+      "required": ["id", "nombre"]
+    },
+    "OrderOP": {
+      "title": "OrderOP",
+      "description": "Orden de producción",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "numero": { "type": "string" },
+        "fecha": { "type": "string" },
+        "estado": { "type": "string" }
+      },
+      "required": ["id", "numero"]
+    },
+    "Supplier": {
+      "title": "Supplier",
+      "description": "Supplier supplier details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "razonSocial": { "type": "string" },
+        "cuit": { "type": "string" },
+        "contacto": { "type": "string" }
+      },
+      "required": ["id", "razonSocial"]
+    },
+    "User": {
+      "title": "User",
+      "description": "System user account",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
         "nombre": { "type": "string" },
         "email": { "type": "string" },
-        "rol": { "type": "string", "enum": ["Administrador", "Vendedor"] },
-        "activo": { "type": "boolean" },
-        "ultimoAcceso": { "type": "string" }
+        "rol": { "type": "string", "enum": ["Administrador", "Vendedor", "Operador"] },
+        "activo": { "type": "boolean" }
       },
-      "required": ["nombre", "email", "rol", "activo"]
+      "required": ["id", "email", "rol"]
     },
-    "Client": {
-      "title": "Client",
-      "description": "Customer profile for direct sales",
+    "HistoryEvent": {
+      "title": "HistoryEvent",
+      "description": "Immutable audit event log entry",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "nombre": { "type": "string" },
-        "canal": { "type": "string" },
-        "telefono": { "type": "string" },
-        "direccion": { "type": "string" },
-        "saldo": { "type": "number" }
+        "timestamp": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "module": { "type": "string" },
+        "action": { "type": "string" },
+        "details": { "type": "string" }
       },
-      "required": ["nombre", "canal"]
+      "required": ["id", "timestamp", "action", "module"]
+    },
+    "SystemConfig": {
+      "title": "SystemConfig",
+      "description": "Global system configuration document",
+      "type": "object",
+      "properties": {
+        "googleDriveFolderId": { "type": "string" },
+        "autoBackupEnabled": { "type": "boolean" },
+        "lastBackupTime": { "type": "string" }
+      }
     }
   },
   "firestore": {
-    "/products/{productId}": {
+    "products/{productId}": {
       "schema": { "$ref": "#/entities/Product" },
-      "description": "Catalog of frozen products"
+      "description": "Master products catalog collection"
     },
-    "/users/{userId}": {
-      "schema": { "$ref": "#/entities/SystemUser" },
-      "description": "Registered system user accounts"
-    },
-    "/clients/{clientId}": {
+    "clients/{clientId}": {
       "schema": { "$ref": "#/entities/Client" },
-      "description": "Registered customer accounts"
+      "description": "Customers database"
+    },
+    "movements/{movementId}": {
+      "schema": { "$ref": "#/entities/StockMovement" },
+      "description": "Stock transaction audit movements"
+    },
+    "rawMaterials/{rawMaterialId}": {
+      "schema": { "$ref": "#/entities/RawMaterial" },
+      "description": "Raw materials inventory"
+    },
+    "recipes/{recipeId}": {
+      "schema": { "$ref": "#/entities/Recipe" },
+      "description": "Production recipes formulas"
+    },
+    "ordersOP/{orderId}": {
+      "schema": { "$ref": "#/entities/OrderOP" },
+      "description": "Production orders"
+    },
+    "suppliers/{supplierId}": {
+      "schema": { "$ref": "#/entities/Supplier" },
+      "description": "Suppliers catalog"
+    },
+    "users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Registered system users and roles"
+    },
+    "historyEvents/{eventId}": {
+      "schema": { "$ref": "#/entities/HistoryEvent" },
+      "description": "Immutable audit history event log"
+    },
+    "systemConfig/{configId}": {
+      "schema": { "$ref": "#/entities/SystemConfig" },
+      "description": "System configuration parameters"
     }
   }
 }

@@ -191,7 +191,7 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F4F8FA] text-[#1C2D37]">
+    <div className="min-h-screen flex flex-col bg-[#F4F8FA] text-[#1C2D37] w-full max-w-full overflow-x-hidden">
       {/* Top App Header & Navigation */}
       <Header activeTab={activeTab} setActiveTab={setActiveTab} />
 

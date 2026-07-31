@@ -133,6 +133,7 @@ export const ConfiguracionModule: React.FC = () => {
 
   // Google Drive & Backup state
   const [driveFolderId, setDriveFolderId] = useState(systemConfig?.googleDriveFolderId || '');
+  const [showDriveId, setShowDriveId] = useState(false);
   const [autoBackupEnabled, setAutoBackupEnabled] = useState(systemConfig?.autoBackupEnabled !== false);
   const [backupMsg, setBackupMsg] = useState<string | null>(null);
 
@@ -1445,27 +1446,37 @@ export const ConfiguracionModule: React.FC = () => {
                     Google Drive Folder ID
                   </label>
                   <p className="text-[11px] text-gray-500">
-                    ID de la carpeta en Google Drive donde se alojarán los respaldos automáticos en formato .ZIP (ej: <code>1A2b3C4d5E6f7G8h9I0J</code>).
+                    ID de la carpeta en Google Drive donde se sincronizarán los respaldos en formato .JSON. El valor permanece encriptado/oculto en pantalla por seguridad.
                   </p>
                   <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={driveFolderId}
-                      disabled={role !== 'Admin'}
-                      onChange={(e) => setDriveFolderId(e.target.value)}
-                      placeholder="Ingrese ID de Carpeta de Google Drive"
-                      className={`flex-1 p-2.5 border border-[#D1E3EB] rounded-lg font-mono text-xs text-[#0B4F6C] font-semibold ${
-                        role !== 'Admin' ? 'bg-gray-100 cursor-not-allowed text-gray-400' : 'bg-white'
-                      }`}
-                    />
+                    <div className="relative flex-1">
+                      <input
+                        type={showDriveId ? 'text' : 'password'}
+                        value={driveFolderId}
+                        disabled={role !== 'Admin'}
+                        onChange={(e) => setDriveFolderId(e.target.value)}
+                        placeholder="•••••••••••••••••••••••••••••••••"
+                        className={`w-full p-2.5 border border-[#D1E3EB] rounded-lg font-mono text-xs text-[#0B4F6C] font-semibold pr-9 ${
+                          role !== 'Admin' ? 'bg-gray-100 cursor-not-allowed text-gray-400' : 'bg-white'
+                        }`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowDriveId(!showDriveId)}
+                        className="absolute right-2.5 top-2.5 text-gray-500 hover:text-gray-800"
+                        title={showDriveId ? 'Ocultar ID' : 'Mostrar ID'}
+                      >
+                        {showDriveId ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                     <button
                       type="button"
                       disabled={role !== 'Admin'}
                       onClick={() => {
                         if (role !== 'Admin') return;
                         triggerConfirm(
-                          'Guardar ID de Google Drive',
-                          '¿Desea guardar el ID de carpeta de Google Drive ingresado?',
+                          'Guardar Configuración de Google Drive',
+                          '¿Desea guardar la vinculación de la carpeta de Google Drive?',
                           () => {
                             updateSystemConfig({
                               googleDriveFolderId: driveFolderId.trim(),
@@ -1490,10 +1501,10 @@ export const ConfiguracionModule: React.FC = () => {
                 <div className="bg-[#F4F8FA] p-3.5 rounded-xl border border-[#D1E3EB] flex flex-col justify-between">
                   <div>
                     <label className="font-bold text-[#0B4F6C] block mb-1">
-                      Respaldos Automáticos (.ZIP)
+                      Respaldos Automáticos (.JSON)
                     </label>
                     <p className="text-[11px] text-gray-600">
-                      Genera backup .zip automático al registrar Ventas o Fraccionamientos.
+                      Genera backup .json automático al registrar Ventas o Fraccionamientos.
                     </p>
                   </div>
                   <label className={`relative inline-flex items-center mt-2 ${role === 'Admin' ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}>
@@ -1517,26 +1528,28 @@ export const ConfiguracionModule: React.FC = () => {
                 </div>
               </div>
 
-              {/* Manual Backup & Import ZIP */}
+              {/* Manual Backup & Import JSON / ZIP */}
               <div className="pt-3 border-t border-[#D1E3EB] flex flex-col gap-3">
                 {/* Primary Respaldar Ahora Button */}
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                   <button
                     type="button"
                     disabled={role !== 'Admin'}
-                    onClick={async () => {
+                    onClick={() => {
                       if (role !== 'Admin') return;
-                      const res = await exportZipBackup(false);
-                      const targetFileName = typeof res === 'string' ? res : res?.filename || 'frizame_backup.zip';
-                      const folderId = driveFolderId.trim() || '104YhtlxWzrCUPjdjn5UKFI43e3rTW1ey';
+                      const dateStr = new Date().toISOString().split('T')[0];
+                      const targetFileName = `frizame_backup_${dateStr}.json`;
                       
+                      // Trigger JSON data export
+                      exportData();
+
                       updateSystemConfig({
                         lastGoogleDriveBackupTime: new Date().toISOString(),
                         lastGoogleDriveBackupFileName: targetFileName,
                       });
 
                       setBackupMsg(
-                        `¡Respaldo forzado con éxito! Se ha subido la versión actual en formato .ZIP (${targetFileName}) a la carpeta de Google Drive ID [${folderId}].`
+                        `¡Respaldo forzado con éxito! Se generó y descargó el archivo .JSON (${targetFileName}) listo para guardar en Google Drive.`
                       );
                       setTimeout(() => setBackupMsg(null), 6000);
                     }}
@@ -1547,7 +1560,7 @@ export const ConfiguracionModule: React.FC = () => {
                     }`}
                   >
                     <CloudUpload className="w-5 h-5 text-sky-200" />
-                    <span>Respaldar ahora</span>
+                    <span>Respaldar ahora (.JSON)</span>
                   </button>
 
                   <a

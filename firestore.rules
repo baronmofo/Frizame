@@ -1,30 +1,91 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Default catch-all deny
+
+    // Global Deny Catch-All
     match /{document=**} {
       allow read, write: if false;
     }
 
-    // Helper functions
+    // Helper Functions
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // Products collection: Readable by authenticated users, writable by authenticated users
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128;
+    }
+
+    // Products Collection
     match /products/{productId} {
-      allow read, write: if isSignedIn();
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if isSignedIn();
     }
 
-    // Users collection: Readable and writable by authenticated users
-    match /users/{userId} {
-      allow read, write: if isSignedIn();
-    }
-
-    // Clients collection
+    // Clients Collection
     match /clients/{clientId} {
-      allow read, write: if isSignedIn();
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if isSignedIn();
+    }
+
+    // Movements (Stock Transactions)
+    match /movements/{movementId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if false; // Stock movements are transactional audit records
+    }
+
+    // Raw Materials Collection
+    match /rawMaterials/{rawMaterialId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if isSignedIn();
+    }
+
+    // Recipes Collection
+    match /recipes/{recipeId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if isSignedIn();
+    }
+
+    // Orders OP Collection
+    match /ordersOP/{orderId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if isSignedIn();
+    }
+
+    // Suppliers Collection
+    match /suppliers/{supplierId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if isSignedIn();
+    }
+
+    // System Users Collection
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if isSignedIn();
+    }
+
+    // INMUTABILIDAD DEL HISTORIAL AUDITOR (Audit Log Collection)
+    // History events are append-only. Creates allowed for authenticated users; updates and deletes strictly forbidden!
+    match /historyEvents/{eventId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if false; // Strict Immutability Guard
+    }
+
+    // System Configuration Collection
+    match /systemConfig/{configId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if false;
     }
   }
 }

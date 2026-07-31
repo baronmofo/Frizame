@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import JSZip from 'jszip';
 import { Product, Client, Movement, RawMaterial, Recipe, RecipeItem, UserRole, OrderOP, CartItem, SaleChannel, Supplier, SupplierHistory, AppSystemConfig, HistoryEvent, StockImpact, FinancialImpact, SystemUser } from '../types';
 import { initialProducts, initialClients, initialMovements, initialRawMaterials, initialRecipes, initialSuppliers, initialSystemConfig } from '../data/initialData';
+import { syncHistoryEventToFirestore, executeAtomicStockTransaction, syncDocumentToFirestore } from '../lib/firestoreSync';
 
 const STORAGE_KEY = 'frizame_app_db_v6';
 
@@ -29,6 +30,8 @@ interface AppContextType {
   isLoggedIn: boolean;
   loginUser: (email: string, pass: string) => { success: boolean; message?: string };
   logoutUser: () => void;
+  sessionExpiredMsg: string | null;
+  clearSessionExpiredMsg: () => void;
   
   // Actions
   addProduct: (product: Partial<Product>) => void;
@@ -283,9 +286,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
+  const SESSION_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutos
+
+  const [sessionExpiredMsg, setSessionExpiredMsg] = useState<string | null>(null);
+
+  const clearSessionExpiredMsg = () => setSessionExpiredMsg(null);
+
   const [currentUser, setCurrentUser] = useState<SystemUser | null>(() => {
     const saved = localStorage.getItem('frizame_current_user') || sessionStorage.getItem('frizame_current_user');
+    const lastActivity = localStorage.getItem('frizame_last_activity') || sessionStorage.getItem('frizame_last_activity');
     if (saved) {
+      if (lastActivity) {
+        const elapsed = Date.now() - parseInt(lastActivity, 10);
+        if (elapsed > SESSION_TIMEOUT_MS) {
+          localStorage.removeItem('frizame_current_user');
+          sessionStorage.removeItem('frizame_current_user');
+          localStorage.removeItem('frizame_last_activity');
+          sessionStorage.removeItem('frizame_last_activity');
+          return null;
+        }
+      }
       try {
         return JSON.parse(saved);
       } catch (e) {
@@ -324,9 +344,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const updatedUsersList = users.map((u) => (u.id === matchedUser.id ? updatedUser : u));
     setUsersList(updatedUsersList);
 
+    const nowMs = Date.now().toString();
     setCurrentUser(updatedUser);
+    setSessionExpiredMsg(null);
     localStorage.setItem('frizame_current_user', JSON.stringify(updatedUser));
     sessionStorage.setItem('frizame_current_user', JSON.stringify(updatedUser));
+    localStorage.setItem('frizame_last_activity', nowMs);
+    sessionStorage.setItem('frizame_last_activity', nowMs);
 
     if (updatedUser.rol === 'Administrador') {
       setRole('Admin');
@@ -363,7 +387,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCurrentUser(null);
     localStorage.removeItem('frizame_current_user');
     sessionStorage.removeItem('frizame_current_user');
+    localStorage.removeItem('frizame_last_activity');
+    sessionStorage.removeItem('frizame_last_activity');
   };
+
+  // 15-Minute Session Timeout Listener & Activity Tracking
+  useEffect(() => {
+    if (!currentUser || !requireLogin) return;
+
+    let lastRecordedActivity = Date.now();
+    const updateActivity = () => {
+      const now = Date.now();
+      if (now - lastRecordedActivity > 5000) { // Throttle updates to localStorage
+        lastRecordedActivity = now;
+        localStorage.setItem('frizame_last_activity', String(now));
+        sessionStorage.setItem('frizame_last_activity', String(now));
+      }
+    };
+
+    const activityEvents = ['mousemove', 'keydown', 'click', 'touchstart', 'scroll'];
+    activityEvents.forEach((evt) => window.addEventListener(evt, updateActivity, { passive: true }));
+
+    const checkInterval = setInterval(() => {
+      const savedActivity = localStorage.getItem('frizame_last_activity') || sessionStorage.getItem('frizame_last_activity');
+      if (savedActivity) {
+        const elapsed = Date.now() - parseInt(savedActivity, 10);
+        if (elapsed >= SESSION_TIMEOUT_MS) {
+          setSessionExpiredMsg('Su sesión ha caducado automáticamente por inactividad (15 minutos). Por favor, vuelva a iniciar sesión.');
+          logoutUser();
+        }
+      }
+    }, 10000);
+
+    return () => {
+      activityEvents.forEach((evt) => window.removeEventListener(evt, updateActivity));
+      clearInterval(checkInterval);
+    };
+  }, [currentUser, requireLogin]);
 
   // Ensure product 106 is active on load
   useEffect(() => {
@@ -400,6 +460,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       timestamp: new Date().toISOString(),
     };
     setHistoryEvents((prev) => [newEvt, ...prev]);
+    syncHistoryEventToFirestore(newEvt);
     return newEvt;
   };
 
@@ -1584,7 +1645,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const exportData = () => {
-    const state = { products, clients, movements, rawMaterials, recipes, ordersOP, suppliers, systemConfig };
+    const state = { products, clients, movements, rawMaterials, recipes, ordersOP, suppliers, systemConfig, users, historyEvents };
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute('href', dataStr);
@@ -1599,13 +1660,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const importData = (jsonData: any) => {
     try {
-      if (jsonData.products && jsonData.clients) {
+      if (jsonData.products || jsonData.clients) {
         if (jsonData.products) setProducts(jsonData.products);
         if (jsonData.clients) setClients(jsonData.clients);
         if (jsonData.movements) setMovements(jsonData.movements);
         if (jsonData.rawMaterials) setRawMaterials(jsonData.rawMaterials);
         if (jsonData.recipes) setRecipes(jsonData.recipes);
         if (jsonData.ordersOP) setOrdersOP(jsonData.ordersOP);
+        if (jsonData.suppliers) setSuppliers(jsonData.suppliers);
+        if (jsonData.users) setUsersList(jsonData.users);
+        if (jsonData.historyEvents) setHistoryEvents(jsonData.historyEvents);
+        if (jsonData.systemConfig) setSystemConfig(jsonData.systemConfig);
         return true;
       }
     } catch (e) {
@@ -1672,6 +1737,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isLoggedIn,
         loginUser,
         logoutUser,
+        sessionExpiredMsg,
+        clearSessionExpiredMsg,
       }}
     >
       {children}

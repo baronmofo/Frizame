@@ -4,7 +4,7 @@ import { FrizameLogo } from './FrizameLogo';
 import { Lock, Mail, Eye, EyeOff, LogIn, AlertCircle, ShieldCheck, UserCheck } from 'lucide-react';
 
 export const LoginScreen: React.FC = () => {
-  const { users, loginUser } = useApp();
+  const { users, loginUser, sessionExpiredMsg, clearSessionExpiredMsg } = useApp();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -14,6 +14,7 @@ export const LoginScreen: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
+    if (clearSessionExpiredMsg) clearSessionExpiredMsg();
 
     if (!email.trim()) {
       setErrorMessage('Por favor, ingrese su correo electrónico.');
@@ -70,6 +71,13 @@ export const LoginScreen: React.FC = () => {
               Ingrese sus credenciales registradas para ingresar al sistema
             </p>
           </div>
+
+          {sessionExpiredMsg && (
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-semibold flex items-center gap-2 animate-fadeIn">
+              <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
+              <span>{sessionExpiredMsg}</span>
+            </div>
+          )}
 
           {errorMessage && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-semibold flex items-center gap-2 animate-fadeIn">

@@ -47,7 +47,7 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
   };
 
   return (
-    <header className="no-print bg-gradient-to-r from-[#0B4F6C] to-[#083b52] text-white px-4 py-3 shadow-md sticky top-0 z-50">
+    <header className="no-print bg-gradient-to-r from-[#0B4F6C] to-[#083b52] text-white px-3 sm:px-4 py-2.5 sm:py-3 shadow-md sticky top-0 z-50 w-full max-w-full overflow-x-hidden">
       <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
         {/* Brand Logo & Title */}
         <div
@@ -57,111 +57,110 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
           <FrizameLogo variant="header" className="h-10" />
         </div>
 
-        {/* Navigation Tabs */}
-        <nav className="flex flex-wrap gap-1 bg-white/10 p-1.5 rounded-xl backdrop-blur-md">
+        {/* Navigation Tabs (Native Mobile Botonera Style) */}
+        <nav className="flex items-center justify-around sm:justify-start gap-1 sm:gap-1.5 overflow-x-auto max-w-full py-1.5 px-1.5 bg-[#083144]/80 sm:bg-white/10 rounded-2xl backdrop-blur-md border border-white/15 shadow-inner scrollbar-none snap-x snap-mandatory">
           <button
             onClick={() => setActiveTab('mod-dashboard')}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-brand text-xs md:text-sm font-medium transition-all ${
+            title="Inicio"
+            className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl font-brand text-xs sm:text-sm font-semibold transition-all shrink-0 snap-start active:scale-95 touch-manipulation ${
               activeTab === 'mod-dashboard'
-                ? 'bg-[#017E9A] text-white shadow-md'
+                ? 'bg-[#017E9A] text-white shadow-md border border-sky-300/30'
                 : 'text-sky-100 hover:bg-white/10 hover:text-white'
             }`}
           >
-            <PieChart className="w-4 h-4" />
-            <span>Dashboard</span>
+            <PieChart className="w-5 h-5 sm:w-4 sm:h-4 shrink-0" />
+            <span className="hidden sm:inline">Inicio</span>
           </button>
 
           <button
             onClick={() => setActiveTab('mod-stock')}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-brand text-xs md:text-sm font-medium transition-all ${
+            title="Ventas"
+            className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl font-brand text-xs sm:text-sm font-semibold transition-all shrink-0 snap-start active:scale-95 touch-manipulation ${
               activeTab === 'mod-stock'
-                ? 'bg-[#017E9A] text-white shadow-md'
+                ? 'bg-[#017E9A] text-white shadow-md border border-sky-300/30'
                 : 'text-sky-100 hover:bg-white/10 hover:text-white'
             }`}
           >
-            <Boxes className="w-4 h-4" />
-            <span>1. Ventas</span>
+            <Boxes className="w-5 h-5 sm:w-4 sm:h-4 shrink-0" />
+            <span className="hidden sm:inline">Ventas</span>
           </button>
 
           <button
             onClick={() => setActiveTab('mod-clientes')}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-brand text-xs md:text-sm font-medium transition-all ${
+            title="Clientes"
+            className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl font-brand text-xs sm:text-sm font-semibold transition-all shrink-0 snap-start active:scale-95 touch-manipulation ${
               activeTab === 'mod-clientes'
-                ? 'bg-[#017E9A] text-white shadow-md'
+                ? 'bg-[#017E9A] text-white shadow-md border border-sky-300/30'
                 : 'text-sky-100 hover:bg-white/10 hover:text-white'
             }`}
           >
-            <Users className="w-4 h-4" />
-            <span>2. Clientes</span>
+            <Users className="w-5 h-5 sm:w-4 sm:h-4 shrink-0" />
+            <span className="hidden sm:inline">Clientes</span>
           </button>
 
           <button
             onClick={() => setActiveTab('mod-rotulos')}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-brand text-xs md:text-sm font-medium transition-all ${
+            title="Imprimir"
+            className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl font-brand text-xs sm:text-sm font-semibold transition-all shrink-0 snap-start active:scale-95 touch-manipulation ${
               activeTab === 'mod-rotulos'
-                ? 'bg-[#017E9A] text-white shadow-md'
+                ? 'bg-[#017E9A] text-white shadow-md border border-sky-300/30'
                 : 'text-sky-100 hover:bg-white/10 hover:text-white'
             }`}
           >
-            <Printer className="w-4 h-4" />
-            <span>3. Imprimir</span>
+            <Printer className="w-5 h-5 sm:w-4 sm:h-4 shrink-0" />
+            <span className="hidden sm:inline">Imprimir</span>
           </button>
 
           <button
             onClick={() => setActiveTab('mod-fraccionamiento')}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-brand text-xs md:text-sm font-medium transition-all ${
+            title="Productos"
+            className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl font-brand text-xs sm:text-sm font-semibold transition-all shrink-0 snap-start active:scale-95 touch-manipulation ${
               activeTab === 'mod-fraccionamiento'
-                ? 'bg-[#017E9A] text-white shadow-md'
+                ? 'bg-[#017E9A] text-white shadow-md border border-sky-300/30'
                 : 'text-sky-100 hover:bg-white/10 hover:text-white'
             }`}
           >
-            <RotateCw className="w-4 h-4" />
-            <span>4. Productos</span>
+            <RotateCw className="w-5 h-5 sm:w-4 sm:h-4 shrink-0" />
+            <span className="hidden sm:inline">Productos</span>
           </button>
 
           {role === 'Admin' && (
             <button
               onClick={() => setActiveTab('mod-costos')}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-brand text-xs md:text-sm font-medium transition-all ${
+              title="Proveedores"
+              className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl font-brand text-xs sm:text-sm font-semibold transition-all shrink-0 snap-start active:scale-95 touch-manipulation ${
                 activeTab === 'mod-costos'
-                  ? 'bg-[#017E9A] text-white shadow-md'
+                  ? 'bg-[#017E9A] text-white shadow-md border border-sky-300/30'
                   : 'text-sky-100 hover:bg-white/10 hover:text-white'
               }`}
             >
-              <Calculator className="w-4 h-4" />
-              <span>5. Proveedores</span>
+              <Calculator className="w-5 h-5 sm:w-4 sm:h-4 shrink-0" />
+              <span className="hidden sm:inline">Proveedores</span>
             </button>
           )}
 
           <button
             onClick={() => setActiveTab('mod-configuracion')}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-brand text-xs md:text-sm font-medium transition-all ${
+            title="Configuración"
+            aria-label="Configuración"
+            className={`flex items-center justify-center p-2.5 sm:px-3 sm:py-2 rounded-xl font-brand transition-all shrink-0 snap-start active:scale-95 touch-manipulation ${
               activeTab === 'mod-configuracion'
-                ? 'bg-[#017E9A] text-white shadow-md'
+                ? 'bg-[#017E9A] text-white shadow-md border border-sky-300/30'
                 : 'text-sky-100 hover:bg-white/10 hover:text-white'
             }`}
           >
-            <Settings className="w-4 h-4" />
-            <span>6. Configuración</span>
+            <Settings className="w-5 h-5 sm:w-4 sm:h-4 shrink-0" />
           </button>
         </nav>
 
         {/* Role Selector & Backup Actions */}
         <div className="flex items-center gap-2">
-          <div className="bg-white/15 px-3 py-1 rounded-lg flex items-center gap-2 text-white text-xs">
-            <ShieldCheck className="w-4 h-4 text-[#A3D9E8]" />
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value as 'Admin' | 'Vendedor')}
-              className="bg-transparent text-white font-brand font-semibold outline-none cursor-pointer text-xs focus:bg-[#0B4F6C]"
-            >
-              <option value="Admin" className="bg-[#0B4F6C] text-white">
-                Rol: Administrador
-              </option>
-              <option value="Vendedor" className="bg-[#0B4F6C] text-white">
-                Rol: Vendedor / Operador
-              </option>
-            </select>
+          {/* User Role Badge (Role is managed in Config) */}
+          <div className="bg-white/15 px-3 py-1.5 rounded-xl flex items-center gap-1.5 text-white text-xs font-semibold border border-white/10 shrink-0">
+            <ShieldCheck className="w-4 h-4 text-[#A3D9E8] shrink-0" />
+            <span className="font-brand font-semibold text-xs text-sky-100">
+              Rol: {role === 'Admin' ? 'Administrador' : 'Vendedor / Operador'}
+            </span>
           </div>
 
           {currentUser && (
