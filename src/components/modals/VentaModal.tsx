@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { CartItem, OrderOP, SaleChannel } from '../../types';
 import { ShoppingCart, X, Plus, Trash2, Check, AlertCircle } from 'lucide-react';
 import { ConfirmModal } from './ConfirmModal';
+import { getReservedQtyForProduct } from '../../utils/stockUtils';
+import { SearchableSelect } from '../common/SearchableSelect';
 
 interface VentaModalProps {
   isOpen: boolean;
@@ -17,7 +19,7 @@ export const VentaModal: React.FC<VentaModalProps> = ({
   onSaleConfirmed,
   orderToEdit,
 }) => {
-  const { products, clients, addMultiItemSale, updateOrderOP, cancelOrderOP } = useApp();
+  const { products, clients, ordersOP, addMultiItemSale, updateOrderOP, cancelOrderOP, deductProductLot } = useApp();
 
   const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0]);
   const [canal, setCanal] = useState<SaleChannel>('Particular');
@@ -37,6 +39,37 @@ export const VentaModal: React.FC<VentaModalProps> = ({
   const [itemVencimiento, setItemVencimiento] = useState<string>('');
 
   const [descuento, setDescuento] = useState<number>(0);
+
+  const stockErrorItems = useMemo(() => {
+    const errors: {
+      nombre: string;
+      solicitado: number;
+      disponible: number;
+      unidad: string;
+    }[] = [];
+
+    for (const item of cartItems) {
+      const prod = products.find(
+        (p) => p.id === item.productId || String(p.id) === String(item.productId)
+      );
+      const available = prod
+        ? prod.tipo === 'Bandeja'
+          ? prod.stockBandejas || 0
+          : prod.stockGranelKg || 0
+        : 0;
+
+      if (item.cantidad > available) {
+        errors.push({
+          nombre: item.nombre,
+          solicitado: item.cantidad,
+          disponible: available,
+          unidad: prod?.tipo === 'Bandeja' ? 'bandejas' : 'Kg',
+        });
+      }
+    }
+
+    return errors;
+  }, [cartItems, products]);
 
   const selectedClient = clients.find(
     (c) => c.id === selectedClientId || String(c.id) === String(selectedClientId)
@@ -177,6 +210,27 @@ export const VentaModal: React.FC<VentaModalProps> = ({
       return;
     }
 
+    // Validation: To generate OP (Confirmado), quantity cannot exceed available stock
+    if (estado === 'Confirmado') {
+      for (const item of cartItems) {
+        const prod = products.find(
+          (p) => p.id === item.productId || String(p.id) === String(item.productId)
+        );
+        const availableStock = prod
+          ? prod.tipo === 'Bandeja'
+            ? prod.stockBandejas || 0
+            : prod.stockGranelKg || 0
+          : 0;
+
+        if (item.cantidad > availableStock) {
+          alert(
+            `No se puede generar la Orden de Pedido (OP) para el producto "${item.nombre}" porque la cantidad a vender (${item.cantidad}) supera la cantidad existente en stock (${availableStock}).\n\nSi desea ingresar la operación como sobre-demanda, utilice el botón "Guardar y Reservar Mercadería".`
+          );
+          return;
+        }
+      }
+    }
+
     let resultOrder: OrderOP | null = null;
 
     if (orderToEdit) {
@@ -204,8 +258,21 @@ export const VentaModal: React.FC<VentaModalProps> = ({
     }
 
     if (resultOrder) {
-      if (estado === 'Confirmado' && onSaleConfirmed) {
-        onSaleConfirmed(resultOrder);
+      if (estado === 'Confirmado') {
+        cartItems.forEach((it) => {
+          if (it.lote) {
+            deductProductLot(it.productId, it.lote, it.cantidad);
+          }
+        });
+        if (onSaleConfirmed) {
+          onSaleConfirmed(resultOrder);
+        } else {
+          alert(
+            `¡Pedido (${estado}) ${resultOrder.numeroOP} guardado con éxito!\nCliente: ${selectedClient.nombre}\nTotal: $${totalFinal.toLocaleString(
+              'es-AR'
+            )}`
+          );
+        }
       } else {
         alert(
           `¡Pedido (${estado}) ${resultOrder.numeroOP} guardado con éxito!\nCliente: ${selectedClient.nombre}\nTotal: $${totalFinal.toLocaleString(
@@ -296,17 +363,16 @@ export const VentaModal: React.FC<VentaModalProps> = ({
 
           <div>
             <label className="block font-semibold text-gray-700 mb-1">Cliente / Destinatario</label>
-            <select
+            <SearchableSelect
               value={selectedClientId}
-              onChange={(e) => setSelectedClientId(e.target.value)}
-              className="w-full p-2 border border-[#D1E3EB] rounded-lg bg-white focus:outline-none focus:border-[#017E9A]"
-            >
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nombre}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setSelectedClientId(val)}
+              placeholder="Seleccionar cliente..."
+              options={clients.map((c) => ({
+                value: c.id,
+                label: c.nombre,
+                sublabel: `Canal: ${c.canal} - Saldo Cta Cte: $${c.saldo.toLocaleString('es-AR')}`,
+              }))}
+            />
 
             {selectedClient && (
               <div className="bg-[#E8F4F8] p-2.5 rounded-lg border border-[#D1E3EB] text-xs text-gray-700 mt-2 flex flex-wrap justify-between gap-2">
@@ -333,24 +399,30 @@ export const VentaModal: React.FC<VentaModalProps> = ({
                 Agregar Producto al Carrito
               </span>
               <span className="text-[10px] text-emerald-800 bg-emerald-100 font-bold px-2 py-0.5 rounded border border-emerald-200">
-                Lote Sugerido FIFO (Vencimiento más próximo)
+                Selección de Lote y Vencimiento Asociado
               </span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-end">
               <div className="sm:col-span-4">
                 <label className="block text-[11px] font-semibold text-gray-600 mb-0.5">Producto</label>
-                <select
+                <SearchableSelect
                   value={selectedProductId}
-                  onChange={(e) => setSelectedProductId(e.target.value)}
-                  className="w-full p-2 border border-[#D1E3EB] rounded-lg bg-white text-xs focus:outline-none focus:border-[#017E9A]"
-                >
-                  {products.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      [{p.codigo}] {p.nombre} ({p.tipo === 'Bandeja' ? `Stock: ${p.stockBandejas} band.` : `Stock: ${p.stockGranelKg} kg`})
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setSelectedProductId(val)}
+                  placeholder="Seleccionar producto..."
+                  options={products.map((p) => {
+                    const reserved = getReservedQtyForProduct(p, ordersOP);
+                    const stockStr =
+                      p.tipo === 'Bandeja'
+                        ? `Stock: ${p.stockBandejas}${reserved > 0 ? ` (-${reserved}*)` : ''} band.`
+                        : `Stock: ${p.stockGranelKg}${reserved > 0 ? ` (-${reserved}*)` : ''} kg`;
+                    return {
+                      value: p.id,
+                      label: `[${p.codigo}] ${p.nombre}`,
+                      sublabel: stockStr,
+                    };
+                  })}
+                />
               </div>
 
               <div className="sm:col-span-2">
@@ -362,19 +434,41 @@ export const VentaModal: React.FC<VentaModalProps> = ({
                   min="1"
                   value={itemCantidad}
                   onChange={(e) => setItemCantidad(parseInt(e.target.value) || 1)}
-                  className="w-full p-2 border border-[#D1E3EB] rounded-lg text-xs focus:outline-none focus:border-[#017E9A]"
+                  className="w-full p-2.5 border border-[#D1E3EB] rounded-lg text-xs font-bold focus:outline-none focus:border-[#017E9A]"
                 />
               </div>
 
               <div className="sm:col-span-2">
-                <label className="block text-[11px] font-semibold text-gray-600 mb-0.5">Lote (FIFO)</label>
-                <input
-                  type="text"
-                  value={itemLote}
-                  onChange={(e) => setItemLote(e.target.value)}
-                  placeholder="Lote"
-                  className="w-full p-2 border border-[#D1E3EB] rounded-lg text-xs font-mono font-bold text-[#0B4F6C] focus:outline-none focus:border-[#017E9A]"
-                />
+                <label className="block text-[11px] font-semibold text-gray-600 mb-0.5">Lote / Venc.</label>
+                {selectedProduct?.lotes && selectedProduct.lotes.length > 0 ? (
+                  <select
+                    value={itemLote}
+                    onChange={(e) => {
+                      const selectedVal = e.target.value;
+                      setItemLote(selectedVal);
+                      const lotObj = selectedProduct.lotes?.find((l) => l.lote === selectedVal);
+                      if (lotObj?.vencimiento) {
+                        setItemVencimiento(lotObj.vencimiento);
+                      }
+                    }}
+                    className="w-full p-2.5 border border-[#D1E3EB] rounded-lg text-xs font-mono font-bold text-[#0B4F6C] focus:outline-none focus:border-[#017E9A]"
+                  >
+                    {selectedProduct.lotes.map((l, idx) => (
+                      <option key={idx} value={l.lote}>
+                        {l.lote} ({l.cantidadStock ?? 'N/D'} u - Venc: {l.vencimiento})
+                      </option>
+                    ))}
+                    <option value="L-CUSTOM">Lote Manual</option>
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    value={itemLote}
+                    onChange={(e) => setItemLote(e.target.value)}
+                    placeholder="Lote"
+                    className="w-full p-2.5 border border-[#D1E3EB] rounded-lg text-xs font-mono font-bold text-[#0B4F6C] focus:outline-none focus:border-[#017E9A]"
+                  />
+                )}
               </div>
 
               <div className="sm:col-span-2">
@@ -383,7 +477,7 @@ export const VentaModal: React.FC<VentaModalProps> = ({
                   type="date"
                   value={itemVencimiento}
                   onChange={(e) => setItemVencimiento(e.target.value)}
-                  className="w-full p-2 border border-[#D1E3EB] rounded-lg text-xs font-medium focus:outline-none focus:border-[#017E9A]"
+                  className="w-full p-2.5 border border-[#D1E3EB] rounded-lg text-xs font-medium focus:outline-none focus:border-[#017E9A]"
                 />
               </div>
 
@@ -391,7 +485,7 @@ export const VentaModal: React.FC<VentaModalProps> = ({
                 <button
                   type="button"
                   onClick={handleAddToCart}
-                  className="w-full py-2 bg-[#017E9A] hover:bg-[#016278] text-white font-brand text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
+                  className="w-full py-2.5 bg-[#017E9A] hover:bg-[#016278] text-white font-brand text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
                 >
                   <Plus className="w-4 h-4" />
                   <span>Agregar</span>
@@ -508,6 +602,31 @@ export const VentaModal: React.FC<VentaModalProps> = ({
             </div>
           </div>
 
+          {/* Insufficient Stock Warning Banner */}
+          {stockErrorItems.length > 0 && (
+            <div className="bg-amber-50 border-2 border-amber-400 p-3.5 rounded-xl flex items-start gap-3 shadow-2xs my-2">
+              <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <div className="text-xs text-amber-900 space-y-1">
+                <p className="font-extrabold text-sm text-amber-950">
+                  ⚠️ Stock Insuficiente para Confirmar Venta y Emitir OP
+                </p>
+                <p className="font-medium">
+                  No se puede confirmar la venta ni generar la Orden de Pedido (OP) porque los siguientes ítems superan las existencias en stock:
+                </p>
+                <ul className="list-disc pl-4 space-y-0.5 font-bold text-amber-950">
+                  {stockErrorItems.map((err, idx) => (
+                    <li key={idx}>
+                      <strong>{err.nombre}</strong>: Solicitado {err.solicitado} {err.unidad} (Disponible en stock: {err.disponible} {err.unidad})
+                    </li>
+                  ))}
+                </ul>
+                <p className="font-semibold text-amber-900 text-[11px] pt-1 border-t border-amber-200 mt-1">
+                  💡 <strong>Operación de Preventa:</strong> El botón <strong>"Confirmar Venta y Generar OP"</strong> se encuentra deshabilitado (grisado). Para registrar la orden como sobre-demanda, utilice el botón <strong>"Guardar y Reservar Mercadería"</strong>.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Total Box */}
           <div className="bg-[#0B4F6C] text-white p-3.5 rounded-xl border border-[#017E9A] flex justify-between items-center">
             <div>
@@ -562,12 +681,17 @@ export const VentaModal: React.FC<VentaModalProps> = ({
               </button>
               <button
                 type="button"
-                disabled={cartItems.length === 0}
+                disabled={cartItems.length === 0 || stockErrorItems.length > 0}
                 onClick={() => handleProcessOrder('Confirmado')}
-                className={`px-5 py-2 font-brand rounded-lg transition-colors flex items-center gap-1.5 shadow-sm text-xs font-bold text-white ${
-                  cartItems.length > 0
-                    ? 'bg-[#0B4F6C] hover:bg-[#083b52]'
-                    : 'bg-gray-400 cursor-not-allowed'
+                title={
+                  stockErrorItems.length > 0
+                    ? 'Stock físico insuficiente. Utilice "Guardar y Reservar Mercadería".'
+                    : 'Confirmar Venta y Generar OP'
+                }
+                className={`px-5 py-2 font-brand rounded-lg transition-colors flex items-center gap-1.5 text-xs font-bold ${
+                  cartItems.length > 0 && stockErrorItems.length === 0
+                    ? 'bg-[#0B4F6C] hover:bg-[#083b52] text-white shadow-sm cursor-pointer'
+                    : 'bg-gray-300 text-gray-500 border border-gray-300 cursor-not-allowed shadow-none'
                 }`}
               >
                 <Check className="w-4 h-4" />

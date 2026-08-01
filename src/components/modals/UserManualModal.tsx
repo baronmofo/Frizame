@@ -34,13 +34,13 @@ export const UserManualModal: React.FC<UserManualModalProps> = ({ isOpen, onClos
 
   const sections = [
     { id: 'all', name: 'Manual Completo', icon: BookOpen },
-    { id: 'general', name: '1. Tablero General', icon: Package },
-    { id: 'ventas', name: '2. Stock y Ventas', icon: ShoppingCart },
-    { id: 'clientes', name: '3. Clientes y Cta. Cte.', icon: Users },
-    { id: 'rotulos', name: '4. Rótulos A4', icon: Printer },
-    { id: 'fraccionamiento', name: '5. Fraccionamiento', icon: Scale },
-    { id: 'costos', name: '6. Costos e Insumos', icon: Calculator },
-    { id: 'configuracion', name: '7. Configuración y Drive', icon: Settings },
+    { id: 'general', name: 'Tablero General', icon: Package },
+    { id: 'ventas', name: 'Stock y Ventas', icon: ShoppingCart },
+    { id: 'clientes', name: 'Clientes y Cta. Cte.', icon: Users },
+    { id: 'rotulos', name: 'Rótulos A4', icon: Printer },
+    { id: 'fraccionamiento', name: 'Fraccionamiento', icon: Scale },
+    { id: 'costos', name: 'Costos e Insumos', icon: Calculator },
+    { id: 'configuracion', name: 'Configuración y Drive', icon: Settings },
   ];
 
   const matches = (text: string) => {
@@ -174,14 +174,13 @@ export const UserManualModal: React.FC<UserManualModalProps> = ({ isOpen, onClos
                 </div>
 
                 <div className="bg-white p-4 rounded-xl border border-[#D1E3EB] space-y-2">
-                  <strong className="text-[#0B4F6C] font-bold block">Paso a Paso para Registrar una Venta:</strong>
-                  <ol className="list-decimal pl-5 space-y-1.5 text-xs">
-                    <li>Haga clic en <strong>"Nueva Venta Multi-Item"</strong> desde el Stock o el Dashboard.</li>
-                    <li>Seleccione el cliente o elija "Consumidor Final". El sistema cargará automáticamente su canal (Particular o Comercio) y dirección de entrega.</li>
-                    <li>Agregue los ítems seleccionando la cantidad. Se aplicará automáticamente la lista de precios correspondiente al canal del cliente.</li>
-                    <li>Seleccione el método de pago (Efectivo, Transferencia, Cta. Cte., etc.).</li>
-                    <li>Haga clic en <strong>"Emitir Orden de Pedido OP"</strong>. Se descontará el stock automáticamente y se actualizará el saldo del cliente en caso de Cta. Cte.</li>
-                  </ol>
+                  <strong className="text-[#0B4F6C] font-bold block">Preventa y Reglas de Reserva de Stock:</strong>
+                  <ul className="list-disc pl-5 space-y-1.5 text-xs text-gray-700">
+                    <li><strong>Validación de Stock Físico:</strong> En el modal "Cargar Pedido de Preventa Multi-Producto", si la cantidad solicitada de cualquier producto supera el stock disponible en depósito, el sistema muestra una alerta clara indicando la disponibilidad y deshabilita (grisa) el botón <strong>"Confirmar Venta y Generar OP"</strong>.</li>
+                    <li><strong>Guardar y Reservar Mercadería (Sobre-Demanda):</strong> Si el stock es insuficiente o desea tomar el pedido como reserva, presione <strong>"Guardar y Reservar Mercadería"</strong>. El pedido quedará en estado <em>RESERVA</em> y el producto registrará saldo reservado.</li>
+                    <li><strong>Alerta de Stock Reservado (-X*) en Dashboard:</strong> Cuando existen productos con mercadería reservada en preventa, el Tablero de Inicio destaca en su botonera principal la tarjeta de <strong>Preventas Registradas</strong> y la sección de <strong>Alertas de Stock</strong> con badges destacados y avisos explicativos.</li>
+                    <li><strong>Trazabilidad de Cancelación y Reactivación:</strong> Al cancelar o modificar una orden reservada, el stock se restituye automáticamente y el historial refleja el evento con precisión sin generar débitos ni créditos ficticios en Cta. Cte.</li>
+                  </ul>
                 </div>
               </div>
             </section>

@@ -16,11 +16,8 @@ export const NuevaRecetaModal: React.FC<NuevaRecetaModalProps> = ({
 }) => {
   const { products, rawMaterials, recipes, addRecipe } = useApp();
 
-  // Products 2XX (Finished Trays)
-  const productos2XX = products.filter((p) => p.codigo.startsWith('2') || p.tipo === 'Bandeja');
-
   const [selectedProductId, setSelectedProductId] = useState<number | string>(
-    initialProductId || productos2XX[0]?.id || products[0]?.id || ''
+    initialProductId || products[0]?.id || ''
   );
 
   // Available insumos items pool: rawMaterials + bulk products (1XX)
@@ -44,7 +41,7 @@ export const NuevaRecetaModal: React.FC<NuevaRecetaModalProps> = ({
   const [items, setItems] = useState<RecipeItem[]>([]);
 
   React.useEffect(() => {
-    const targetId = initialProductId || selectedProductId || productos2XX[0]?.id || products[0]?.id;
+    const targetId = initialProductId || selectedProductId || products[0]?.id;
     if (targetId) {
       setSelectedProductId(targetId);
       const existing = recipes.find(
@@ -149,16 +146,21 @@ export const NuevaRecetaModal: React.FC<NuevaRecetaModalProps> = ({
           {/* Producto Destino 2XX */}
           <div>
             <label className="block font-semibold text-gray-700 mb-1">
-              Producto Destino (Código 2XX)
+              Producto
             </label>
             <select
               value={selectedProductId}
+              disabled={!!initialProductId}
               onChange={(e) => setSelectedProductId(e.target.value)}
-              className="w-full p-2.5 border border-[#D1E3EB] rounded-lg bg-white font-medium focus:outline-none focus:border-[#017E9A]"
+              className={`w-full p-2.5 border rounded-lg font-medium focus:outline-none ${
+                initialProductId
+                  ? 'bg-gray-100 text-gray-600 cursor-not-allowed border-gray-300'
+                  : 'bg-white border-[#D1E3EB] focus:border-[#017E9A]'
+              }`}
             >
-              {(productos2XX.length > 0 ? productos2XX : products).map((p) => (
+              {products.map((p) => (
                 <option key={p.id} value={p.id}>
-                  [{p.codigo}] {p.nombre}
+                  [{p.codigo}] {p.nombre} ({p.tipo || 'Producto'})
                 </option>
               ))}
             </select>

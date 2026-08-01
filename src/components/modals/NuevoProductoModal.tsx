@@ -55,13 +55,17 @@ export const NuevoProductoModal: React.FC<NuevoProductoModalProps> = ({
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
   // Available categories list
-  const categoriesList = systemConfig?.productCategories || [
+  const rawCategories = systemConfig?.productCategories || [
     '1XX - Granel (Kg)',
     '2XX - Bandeja',
     'Insumo',
     'Marketing',
     'Otros',
   ];
+
+  const categoriesList: string[] = rawCategories.map((c: any) =>
+    typeof c === 'string' ? c : c.nombre
+  );
 
   // Available insumos pool: code 1XX bulk products + rawMaterials
   const allInsumoOptions = [
@@ -85,7 +89,10 @@ export const NuevoProductoModal: React.FC<NuevoProductoModalProps> = ({
     if (productToEdit) {
       setCodigo(productToEdit.codigo || '');
       setNombre(productToEdit.nombre || '');
-      setTipo((productToEdit.tipo as ProductType) || '2XX - Bandeja');
+      const safeTipo = typeof productToEdit.tipo === 'string'
+        ? productToEdit.tipo
+        : (productToEdit.tipo as any)?.nombre || '2XX - Bandeja';
+      setTipo(safeTipo as ProductType);
       setPresentacionTexto(
         productToEdit.presentacionTexto ||
           (productToEdit.tipo === 'Gramos' || String(productToEdit.tipo).includes('1XX')
@@ -356,15 +363,21 @@ export const NuevoProductoModal: React.FC<NuevoProductoModalProps> = ({
               <input
                 type="text"
                 required
+                readOnly={!!productToEdit}
                 value={codigo}
                 onChange={(e) => {
+                  if (productToEdit) return;
                   const val = e.target.value;
                   setCodigo(val);
                   validateCode(val, tipo);
                 }}
                 placeholder="Ej: 101, 201..."
                 className={`w-full p-2 border rounded-lg font-mono font-bold text-[#0B4F6C] focus:outline-none ${
-                  codeError ? 'border-red-500 bg-red-50' : 'border-[#D1E3EB] focus:border-[#017E9A]'
+                  productToEdit
+                    ? 'bg-gray-100 text-gray-600 cursor-not-allowed border-gray-300'
+                    : codeError
+                    ? 'border-red-500 bg-red-50'
+                    : 'border-[#D1E3EB] focus:border-[#017E9A]'
                 }`}
               />
               {codeError && (

@@ -26,6 +26,7 @@ import {
   Receipt,
   MessageCircle,
   RotateCcw,
+  X,
 } from 'lucide-react';
 import { ConfirmModal } from './modals/ConfirmModal';
 import { NuevoInsumoModal } from './modals/NuevoInsumoModal';
@@ -60,6 +61,8 @@ export const CostosModule: React.FC<CostosModuleProps> = ({
     reactivateRawMaterial,
     updateProduct,
     deleteSupplier,
+    editSupplierTransaction,
+    cancelSupplierTransaction,
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'INSUMOS' | 'PROVEEDORES'>(defaultSubTab);
@@ -97,6 +100,11 @@ export const CostosModule: React.FC<CostosModuleProps> = ({
   const [supplierToDelete, setSupplierToDelete] = useState<Supplier | null>(null);
   const [paymentSupplier, setPaymentSupplier] = useState<Supplier | null>(null);
 
+  // Transaction View/Edit/Cancel state
+  const [txToView, setTxToView] = useState<any | null>(null);
+  const [txToEdit, setTxToEdit] = useState<{ id: string; fecha: string; concepto: string; debe: number; haber: number } | null>(null);
+  const [txToCancel, setTxToCancel] = useState<{ id: string; concepto: string } | null>(null);
+
   // Selected Product for Cost Breakdown
   const [selectedProductId, setSelectedProductId] = useState<number | string>(
     products[0]?.id || ''
@@ -131,8 +139,8 @@ export const CostosModule: React.FC<CostosModuleProps> = ({
   }, [categoryMermaObj, selectedProduct, systemConfig?.mermaDefaultPct]);
 
   const [overheads, setOverheads] = useState<Record<string, number>>({
-    'Transporte y Flete': 150,
-    'Mano de Obra Directa': 200,
+    'Transporte y Flete': 0,
+    'Mano de Obra Directa': 0,
   });
 
   const [customPriceComercio, setCustomPriceComercio] = useState<number>(
@@ -398,7 +406,7 @@ export const CostosModule: React.FC<CostosModuleProps> = ({
         <div>
           <h2 className="font-brand font-bold text-2xl text-[#0B4F6C] flex items-center gap-2">
             <Calculator className="w-7 h-7 text-[#017E9A]" />
-            5. Costos, Insumos y Proveedores
+            Estructura de Costos, Insumos y Proveedores
           </h2>
           <p className="text-sm text-[#607D8B]">
             ABM de Insumos, Desglose Automático de Recetas y Fichas de Cuentas Corrientes con Proveedores.
@@ -488,7 +496,7 @@ export const CostosModule: React.FC<CostosModuleProps> = ({
               <div>
                 <h3 className="font-brand font-bold text-lg text-[#0B4F6C] flex items-center gap-2">
                   <Truck className="w-5 h-5 text-[#017E9A]" />
-                  ABM Insumos de Proveedores
+                  Insumos y Materias Primas
                 </h3>
                 <span className="text-xs text-gray-500 font-medium">
                   {filteredInsumos.length} Insumos • Haz clic en encabezados para ordenar
@@ -1168,6 +1176,7 @@ export const CostosModule: React.FC<CostosModuleProps> = ({
                           <th className="p-2.5 text-right">Debe ($)</th>
                           <th className="p-2.5 text-right">Haber ($)</th>
                           <th className="p-2.5 text-right">Saldo ($)</th>
+                          <th className="p-2.5 text-center">Acciones</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#D1E3EB]">
@@ -1191,11 +1200,52 @@ export const CostosModule: React.FC<CostosModuleProps> = ({
                                   ? `$${h.saldo.toLocaleString('es-AR')}`
                                   : '••••••••'}
                               </td>
+                              <td className="p-2.5 text-center">
+                                <div className="flex items-center justify-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => setTxToView(h)}
+                                    title="Ver Detalle"
+                                    className="p-1 text-[#017E9A] hover:bg-[#E8F4F8] rounded transition-colors"
+                                  >
+                                    <Eye className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setTxToEdit({
+                                        id: h.id,
+                                        fecha: h.fecha,
+                                        concepto: h.concepto,
+                                        debe: h.debe,
+                                        haber: h.haber,
+                                      })
+                                    }
+                                    title="Editar Movimiento"
+                                    className="p-1 text-amber-600 hover:bg-amber-50 rounded transition-colors"
+                                  >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setTxToCancel({
+                                        id: h.id,
+                                        concepto: h.concepto,
+                                      })
+                                    }
+                                    title="Cancelar / Anular Movimiento"
+                                    className="p-1 text-red-500 hover:bg-red-50 rounded transition-colors"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </td>
                             </tr>
                           ))
                         ) : (
                           <tr>
-                            <td colSpan={5} className="p-4 text-center text-gray-500 italic">
+                            <td colSpan={6} className="p-4 text-center text-gray-500 italic">
                               Sin movimientos en la cuenta corriente de este proveedor.
                             </td>
                           </tr>
@@ -1333,6 +1383,158 @@ export const CostosModule: React.FC<CostosModuleProps> = ({
           </div>
         </div>
       )}
+
+      {/* View Supplier Transaction Modal */}
+      {txToView && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-[#D1E3EB]">
+            <div className="flex justify-between items-center mb-4 pb-2 border-b border-[#D1E3EB]">
+              <h3 className="font-brand font-bold text-base text-[#0B4F6C] flex items-center gap-2">
+                <Receipt className="w-5 h-5 text-[#017E9A]" />
+                Detalle del Comprobante / Movimiento
+              </h3>
+              <button onClick={() => setTxToView(null)} className="p-1 hover:bg-gray-100 rounded-lg text-gray-500">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="space-y-3 text-xs">
+              <div>
+                <span className="font-semibold text-gray-500">Fecha:</span>
+                <p className="font-mono font-bold text-gray-800">{txToView.fecha}</p>
+              </div>
+              <div>
+                <span className="font-semibold text-gray-500">Concepto / Operación:</span>
+                <p className="font-bold text-gray-900 bg-gray-50 p-2 rounded-lg border border-gray-200">{txToView.concepto}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2 pt-2">
+                <div className="p-2.5 bg-amber-50 rounded-xl border border-amber-200">
+                  <span className="block text-[10px] uppercase font-bold text-amber-800">Debe (Factura)</span>
+                  <span className="font-mono font-bold text-sm text-amber-900">${txToView.debe.toLocaleString('es-AR')}</span>
+                </div>
+                <div className="p-2.5 bg-emerald-50 rounded-xl border border-emerald-200">
+                  <span className="block text-[10px] uppercase font-bold text-emerald-800">Haber (Pago)</span>
+                  <span className="font-mono font-bold text-sm text-emerald-900">${txToView.haber.toLocaleString('es-AR')}</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end pt-5">
+              <button
+                onClick={() => setTxToView(null)}
+                className="px-4 py-2 bg-[#017E9A] hover:bg-[#016278] text-white font-brand font-bold rounded-xl text-xs transition-colors"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Supplier Transaction Modal */}
+      {txToEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-[#D1E3EB]">
+            <div className="flex justify-between items-center mb-4 pb-2 border-b border-[#D1E3EB]">
+              <h3 className="font-brand font-bold text-base text-[#0B4F6C] flex items-center gap-2">
+                <Pencil className="w-5 h-5 text-amber-600" />
+                Editar Movimiento de Proveedor
+              </h3>
+              <button onClick={() => setTxToEdit(null)} className="p-1 hover:bg-gray-100 rounded-lg text-gray-500">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (selectedSupplierId && txToEdit) {
+                  editSupplierTransaction(selectedSupplierId, txToEdit.id, {
+                    fecha: txToEdit.fecha,
+                    concepto: txToEdit.concepto,
+                    debe: Number(txToEdit.debe) || 0,
+                    haber: Number(txToEdit.haber) || 0,
+                  });
+                  setTxToEdit(null);
+                }
+              }}
+              className="space-y-3 text-xs"
+            >
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">Fecha</label>
+                <input
+                  type="date"
+                  value={txToEdit.fecha}
+                  onChange={(e) => setTxToEdit({ ...txToEdit, fecha: e.target.value })}
+                  className="w-full p-2 border border-[#D1E3EB] rounded-lg font-mono"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">Concepto</label>
+                <input
+                  type="text"
+                  value={txToEdit.concepto}
+                  onChange={(e) => setTxToEdit({ ...txToEdit, concepto: e.target.value })}
+                  className="w-full p-2 border border-[#D1E3EB] rounded-lg font-medium"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">Debe ($)</label>
+                  <input
+                    type="number"
+                    step="any"
+                    min="0"
+                    value={txToEdit.debe}
+                    onChange={(e) => setTxToEdit({ ...txToEdit, debe: parseFloat(e.target.value) || 0 })}
+                    className="w-full p-2 border border-[#D1E3EB] rounded-lg font-bold text-amber-800"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-1">Haber ($)</label>
+                  <input
+                    type="number"
+                    step="any"
+                    min="0"
+                    value={txToEdit.haber}
+                    onChange={(e) => setTxToEdit({ ...txToEdit, haber: parseFloat(e.target.value) || 0 })}
+                    className="w-full p-2 border border-[#D1E3EB] rounded-lg font-bold text-emerald-800"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setTxToEdit(null)}
+                  className="px-4 py-2 border border-[#D1E3EB] bg-white hover:bg-gray-50 text-gray-700 font-brand font-bold rounded-xl text-xs"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-[#017E9A] hover:bg-[#016278] text-white font-brand font-bold rounded-xl text-xs"
+                >
+                  Guardar Cambios
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Cancellation Modal */}
+      <ConfirmModal
+        isOpen={!!txToCancel}
+        onClose={() => setTxToCancel(null)}
+        onConfirm={() => {
+          if (selectedSupplierId && txToCancel) {
+            cancelSupplierTransaction(selectedSupplierId, txToCancel.id);
+            setTxToCancel(null);
+          }
+        }}
+        title="Cancelar / Anular Comprobante de Proveedor"
+        message={`¿Está seguro de anular el movimiento "${txToCancel?.concepto}"? Esta acción recalculará automáticamente el saldo del proveedor.`}
+        confirmText="Anular Movimiento"
+      />
     </div>
   );
 };

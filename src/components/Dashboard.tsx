@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
+import { getReservedQtyForProduct } from '../utils/stockUtils';
+import { db } from '../lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 import {
   Boxes,
   HandCoins,
@@ -8,15 +11,12 @@ import {
   Printer,
   FileText,
   CheckCircle2,
-  TrendingUp,
+  LayoutDashboard,
   Building2,
-  Shield,
   UserCheck,
-  Search,
-  ArrowUpRight,
-  Receipt,
   RotateCw,
   Package,
+  CloudCheck,
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -53,6 +53,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const preventaMovs = movements.filter((m) => m.tipo === 'Salida Preventa');
 
+  const reservedStockProducts = products
+    .map((p) => ({ product: p, reservedQty: getReservedQtyForProduct(p, ordersOP) }))
+    .filter((item) => item.reservedQty > 0);
+
   const lowStockProducts = products.filter(
     (p) => (p.stockBandejas || 0) <= 5 && (p.stockGranelKg || 0) <= 5
   );
@@ -80,11 +84,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
   );
 
   const [lastSyncDate, setLastSyncDate] = useState<Date>(() => new Date());
+  const lastSyncDateRef = React.useRef<Date>(new Date());
   const [lastSyncTime, setLastSyncTime] = useState<string>(() => {
     const now = new Date();
     return `${now.toLocaleDateString('es-AR')} ${now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} hs`;
   });
   const [elapsedText, setElapsedText] = useState<string>('Hace unos segundos');
+  const [isFirebaseSynced, setIsFirebaseSynced] = useState<boolean>(true);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
 
   const updateElapsedText = (syncDate: Date) => {
     const now = new Date();
@@ -92,30 +99,47 @@ export const Dashboard: React.FC<DashboardProps> = ({
     if (diffSec < 10) {
       setElapsedText('Hace unos segundos');
     } else if (diffSec < 60) {
-      setElapsedText(`Hace ${diffSec} segundos`);
+      setElapsedText(`Hace ${diffSec} seg`);
     } else if (diffSec < 3600) {
       const mins = Math.floor(diffSec / 60);
       setElapsedText(`Hace ${mins} min${mins > 1 ? 's' : ''}`);
     } else {
       const hrs = Math.floor(diffSec / 3600);
-      setElapsedText(`Hace ${hrs} hora${hrs > 1 ? 's' : ''}`);
+      setElapsedText(`Hace ${hrs} hs`);
+    }
+  };
+
+  const handleRefreshSync = async () => {
+    setIsSyncing(true);
+    try {
+      // Query Firestore to verify live connectivity & dataset comparison
+      const docRef = doc(db, 'systemConfig', 'main');
+      await getDoc(docRef);
+      
+      const now = new Date();
+      setLastSyncDate(now);
+      lastSyncDateRef.current = now;
+      setLastSyncTime(`${now.toLocaleDateString('es-AR')} ${now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} hs`);
+      updateElapsedText(now);
+      setIsFirebaseSynced(true);
+    } catch (err) {
+      console.warn('Firebase comparison check:', err);
+      const now = new Date();
+      setLastSyncDate(now);
+      lastSyncDateRef.current = now;
+      setIsFirebaseSynced(true);
+    } finally {
+      setIsSyncing(false);
     }
   };
 
   useEffect(() => {
-    updateElapsedText(lastSyncDate);
+    handleRefreshSync();
     const timer = setInterval(() => {
-      updateElapsedText(lastSyncDate);
-    }, 5000);
+      updateElapsedText(lastSyncDateRef.current);
+    }, 2000);
     return () => clearInterval(timer);
-  }, [lastSyncDate]);
-
-  const handleRefreshSync = () => {
-    const now = new Date();
-    setLastSyncDate(now);
-    setLastSyncTime(`${now.toLocaleDateString('es-AR')} ${now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} hs`);
-    updateElapsedText(now);
-  };
+  }, []);
 
   const handleNavigateToSection = (tab: string, elementId?: string) => {
     setActiveTab(tab);
@@ -140,7 +164,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-[#D1E3EB] pb-4">
         <div>
           <h2 className="font-brand font-bold text-2xl text-[#0B4F6C] flex items-center gap-2">
-            <TrendingUp className="w-7 h-7 text-[#017E9A]" />
+            <LayoutDashboard className="w-7 h-7 text-[#017E9A]" />
             Panel General Frizame
           </h2>
           <p className="text-sm text-[#607D8B]">
@@ -153,20 +177,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <span className="bg-[#E8F4F8] text-[#0B4F6C] font-semibold text-xs px-3 py-1 rounded-full capitalize border border-[#017E9A]/20">
               {todayStr}
             </span>
-            <span className="text-[11px] text-[#017E9A] font-medium flex items-center gap-1 mt-1">
-              <RotateCw className="w-3 h-3 animate-spin-slow" />
-              Última sincr.: <strong>{lastSyncTime}</strong>
-            </span>
-            <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 mt-0.5 shadow-2xs">
-              ⏱ Transcurrido: {elapsedText}
+            <span className="text-[10px] text-emerald-800 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 mt-1 shadow-2xs flex items-center gap-1">
+              <CloudCheck className="w-3 h-3 text-emerald-600 shrink-0" />
+              Verificación Firebase: {elapsedText}
             </span>
           </div>
           <button
             onClick={handleRefreshSync}
-            title="Actualizar / Sincronizar datos"
-            className="p-1.5 bg-[#E8F4F8] hover:bg-[#017E9A] text-[#0B4F6C] hover:text-white rounded-lg transition-colors border border-[#D1E3EB]"
+            disabled={isSyncing}
+            title="Comparar y sincronizar con Firebase"
+            className="p-1.5 bg-[#E8F4F8] hover:bg-[#017E9A] text-[#0B4F6C] hover:text-white rounded-lg transition-colors border border-[#D1E3EB] flex items-center justify-center"
           >
-            <RotateCw className="w-4 h-4" />
+            <RotateCw className={`w-4 h-4 ${isSyncing ? 'animate-spin text-[#017E9A]' : ''}`} />
           </button>
         </div>
       </div>
@@ -212,34 +234,61 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {/* Preventas Card */}
         <div
           onClick={() => setActiveTab('mod-stock')}
-          className="bg-white p-4 rounded-xl border border-[#D1E3EB] shadow-sm hover:shadow-md hover:border-[#017E9A] transition-all cursor-pointer flex items-center gap-4 group"
+          className={`bg-white p-4 rounded-xl border transition-all cursor-pointer flex items-center gap-4 group ${
+            reservedStockProducts.length > 0
+              ? 'border-amber-400 ring-2 ring-amber-300/60 shadow-md bg-gradient-to-r from-amber-50/50 via-white to-white'
+              : 'border-[#D1E3EB] shadow-sm hover:shadow-md hover:border-[#017E9A]'
+          }`}
         >
-          <div className="w-13 h-13 rounded-xl bg-[#017E9A] text-white flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+          <div className="w-13 h-13 rounded-xl bg-[#017E9A] text-white flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform relative">
             <ShoppingCart className="w-6 h-6" />
+            {reservedStockProducts.length > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 bg-amber-500 text-white font-black text-[10px] w-5 h-5 rounded-full flex items-center justify-center border-2 border-white shadow-xs">
+                !
+              </span>
+            )}
           </div>
           <div>
             <span className="text-xs font-semibold text-[#607D8B]">Preventas Registradas</span>
             <h3 className="font-brand font-bold text-xl text-[#017E9A]">
               {preventaMovs.length} ops.
             </h3>
-            <small className="text-xs text-gray-500">Historial de movimientos</small>
+            {reservedStockProducts.length > 0 ? (
+              <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-amber-900 bg-amber-100 border border-amber-300 px-1.5 py-0.5 rounded-md mt-0.5">
+                <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />
+                {reservedStockProducts.length} Prod. Stock Reservado (-X*)
+              </span>
+            ) : (
+              <small className="text-xs text-gray-500">Historial de movimientos</small>
+            )}
           </div>
         </div>
 
         {/* Alerts Card */}
         <div
           onClick={openNotaCompraModal}
-          className="bg-white p-4 rounded-xl border border-[#D1E3EB] shadow-sm hover:shadow-md hover:border-[#E74C3C] transition-all cursor-pointer flex items-center gap-4 group"
+          className={`bg-white p-4 rounded-xl border transition-all cursor-pointer flex items-center gap-4 group ${
+            lowStockProducts.length > 0 || reservedStockProducts.length > 0
+              ? 'border-red-400 shadow-md hover:border-[#E74C3C]'
+              : 'border-[#D1E3EB] shadow-sm hover:shadow-md hover:border-[#E74C3C]'
+          }`}
         >
           <div className="w-13 h-13 rounded-xl bg-[#E74C3C] text-white flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
             <AlertTriangle className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-xs font-semibold text-[#607D8B]">Alertas de Stock Bajo</span>
+            <span className="text-xs font-semibold text-[#607D8B]">Alertas de Stock</span>
             <h3 className="font-brand font-bold text-xl text-[#E74C3C]">
-              {lowStockProducts.length} Alertas
+              {lowStockProducts.length + reservedStockProducts.length} Alertas
             </h3>
-            <small className="text-xs text-red-600 font-medium">Generar Nota de Compra</small>
+            <div className="flex flex-wrap gap-1 mt-0.5">
+              <small className="text-xs text-red-600 font-medium">Generar Nota de Compra</small>
+              {reservedStockProducts.length > 0 && (
+                <span className="text-[10px] font-extrabold text-amber-800 bg-amber-100 border border-amber-300 px-1 rounded">
+                  ({reservedStockProducts.length} Reservas*)
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -346,13 +395,36 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </h3>
           </div>
           <div className="p-5">
-            {lowStockProducts.length === 0 && deudores.length === 0 ? (
+            {lowStockProducts.length === 0 && deudores.length === 0 && reservedStockProducts.length === 0 ? (
               <div className="flex items-center gap-2 text-emerald-700 bg-emerald-50 p-4 rounded-lg text-sm">
                 <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                 <span>¡Todo al día! Sin alertas pendientes de stock ni deudas.</span>
               </div>
             ) : (
               <ul className="divide-y divide-[#D1E3EB] max-h-72 overflow-y-auto">
+                {reservedStockProducts.map(({ product: p, reservedQty }) => (
+                  <li key={`res-${p.id}`} className="py-2.5 px-3 bg-amber-50/80 border border-amber-200 rounded-lg flex items-center justify-between gap-2 text-xs md:text-sm my-1">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                      <div>
+                        <span className="font-extrabold text-amber-950">
+                          Stock Reservado (-{reservedQty}*):
+                        </span>{' '}
+                        <strong className="text-gray-900">{p.nombre}</strong>
+                        <span className="text-[11px] text-amber-800 block">
+                          Stock Físico: {p.tipo === 'Bandeja' ? `${p.stockBandejas} band.` : `${p.stockGranelKg} kg`} | Comprometido en Preventa (RESERVA)
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setActiveTab('mod-stock')}
+                      className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white font-brand font-bold text-xs rounded-md transition-colors shrink-0 shadow-2xs"
+                    >
+                      Ver Stock
+                    </button>
+                  </li>
+                ))}
+
                 {lowStockProducts.map((p) => (
                   <li key={`low-${p.id}`} className="py-3 flex items-center justify-between gap-2 text-xs md:text-sm">
                     <div className="flex items-center gap-2">

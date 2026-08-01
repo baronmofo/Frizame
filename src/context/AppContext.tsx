@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import JSZip from 'jszip';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { Product, Client, Movement, RawMaterial, Recipe, RecipeItem, UserRole, OrderOP, CartItem, SaleChannel, Supplier, SupplierHistory, AppSystemConfig, HistoryEvent, StockImpact, FinancialImpact, SystemUser } from '../types';
 import { initialProducts, initialClients, initialMovements, initialRawMaterials, initialRecipes, initialSuppliers, initialSystemConfig } from '../data/initialData';
 import { syncHistoryEventToFirestore, executeAtomicStockTransaction, syncDocumentToFirestore } from '../lib/firestoreSync';
@@ -91,6 +93,12 @@ interface AppContextType {
   deleteSupplier: (id: number | string) => void;
   registerSupplierPayment: (supplierId: number | string, monto: number, metodo: string, concepto?: string, fecha?: string) => void;
   registerSupplierInvoice: (supplierId: number | string, monto: number, concepto: string, fecha?: string) => void;
+  editSupplierTransaction: (supplierId: number | string, txId: string, updatedFields: Partial<SupplierHistory>) => void;
+  cancelSupplierTransaction: (supplierId: number | string, txId: string) => void;
+
+  // Lot Management Actions
+  addProductLot: (productId: number | string, lote: string, vencimiento: string, cantidad: number) => void;
+  deductProductLot: (productId: number | string, lote: string, cantidad: number) => void;
 
   // System Config Actions
   updateSystemConfig: (newConfig: Partial<AppSystemConfig>) => void;
@@ -425,7 +433,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, [currentUser, requireLogin]);
 
-  // Ensure product 106 is active on load
+  // Ensure product 106 is active on load & purge OP-00101 traceability
   useEffect(() => {
     setProducts((prev) =>
       prev.map((p) => {
@@ -435,9 +443,114 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return p;
       })
     );
+
+    // Purge OP-00101 and all of its associated history and traceability
+    setOrdersOP((prev) =>
+      prev.filter((o) => o.numeroOP !== 'OP-00101' && o.id !== 'op-00101' && !o.numeroOP?.includes('00101'))
+    );
+    setMovements((prev) =>
+      prev.filter((m) => !m.item?.includes('00101') && !m.item?.includes('OP-00101'))
+    );
+    setHistoryEvents((prev) =>
+      prev.filter((h) => !h.detalles?.includes('00101') && !h.detalles?.includes('OP-00101'))
+    );
+    setClients((prev) =>
+      prev.map((c) => ({
+        ...c,
+        historial: c.historial ? c.historial.filter((h) => !h.concepto?.includes('00101') && !h.concepto?.includes('OP-00101')) : [],
+      }))
+    );
+
+    async function loadRemoteSystemConfig() {
+      try {
+        const snap = await getDoc(doc(db, 'systemConfig', 'main'));
+        if (snap.exists()) {
+          const remoteData = snap.data() as AppSystemConfig;
+          setSystemConfig((prev) => ({ ...prev, ...remoteData }));
+        }
+      } catch (err) {
+        console.warn('Note: Could not load remote systemConfig from Firestore:', err);
+      }
+    }
+    loadRemoteSystemConfig();
+
+    // Subscribe to real-time updates from Firestore to synchronize across devices (Mobile vs PC)
+    let unsubscribe: (() => void) | undefined;
+    try {
+      unsubscribe = onSnapshot(
+        doc(db, 'appState', 'current'),
+        (snapshot) => {
+          if (snapshot.exists()) {
+            const remoteData = snapshot.data();
+            if (remoteData) {
+              if (remoteData.products && Array.isArray(remoteData.products)) {
+                setProducts(
+                  remoteData.products.map((p: any) => ({
+                    ...p,
+                    activo: p.codigo === '106' || String(p.id) === '106' ? true : p.activo !== false,
+                  }))
+                );
+              }
+              if (remoteData.clients && Array.isArray(remoteData.clients)) {
+                setClients(remoteData.clients);
+              }
+              if (remoteData.suppliers && Array.isArray(remoteData.suppliers)) {
+                setSuppliers(remoteData.suppliers);
+              }
+              if (remoteData.systemConfig) {
+                setSystemConfig(remoteData.systemConfig);
+              }
+              if (remoteData.movements && Array.isArray(remoteData.movements)) {
+                setMovements(
+                  remoteData.movements.filter(
+                    (m: any) => !m.item?.includes('00101') && !m.item?.includes('OP-00101')
+                  )
+                );
+              }
+              if (remoteData.rawMaterials && Array.isArray(remoteData.rawMaterials)) {
+                setRawMaterials(remoteData.rawMaterials);
+              }
+              if (remoteData.recipes && Array.isArray(remoteData.recipes)) {
+                setRecipes(remoteData.recipes);
+              }
+              if (remoteData.ordersOP && Array.isArray(remoteData.ordersOP)) {
+                setOrdersOP(
+                  remoteData.ordersOP.filter(
+                    (o: any) =>
+                      o.numeroOP !== 'OP-00101' &&
+                      o.id !== 'op-00101' &&
+                      !o.numeroOP?.includes('00101')
+                  )
+                );
+              }
+              if (remoteData.historyEvents && Array.isArray(remoteData.historyEvents)) {
+                setHistoryEvents(
+                  remoteData.historyEvents.filter(
+                    (h: any) => !h.detalles?.includes('00101') && !h.detalles?.includes('OP-00101')
+                  )
+                );
+              }
+              if (remoteData.users && Array.isArray(remoteData.users)) {
+                setUsers(remoteData.users);
+                localStorage.setItem('frizame_cfg_users', JSON.stringify(remoteData.users));
+              }
+            }
+          }
+        },
+        (error) => {
+          console.warn('Real-time Firestore sync listener notice:', error.message);
+        }
+      );
+    } catch (e) {
+      console.error('Error attaching Firestore listener:', e);
+    }
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, []);
 
-  // Save to local storage on changes
+  // Save to local storage and sync configuration to Firestore
   useEffect(() => {
     const data = {
       products,
@@ -449,9 +562,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       recipes,
       ordersOP,
       historyEvents,
+      users,
+      updatedAt: new Date().toISOString(),
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  }, [products, clients, suppliers, systemConfig, movements, rawMaterials, recipes, ordersOP, historyEvents]);
+    syncDocumentToFirestore('systemConfig', 'main', systemConfig);
+    syncDocumentToFirestore('appState', 'current', data);
+  }, [products, clients, suppliers, systemConfig, movements, rawMaterials, recipes, ordersOP, historyEvents, users]);
 
   const addHistoryEvent = (evt: Omit<HistoryEvent, 'id' | 'timestamp'>) => {
     const newEvt: HistoryEvent = {
@@ -898,16 +1015,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // If payment was Cuenta Corriente or recorded to client, adjust client balance
     if (existingOrder.formaPago === 'Cuenta Corriente') {
+      const wasConfirmed = existingOrder.estado === 'Confirmado';
       setClients((prev) =>
         prev.map((c) => {
           if (c.id === existingOrder.clientId || String(c.id) === String(existingOrder.clientId)) {
-            const newBalance = Math.max(0, c.saldo - existingOrder.total);
+            const newBalance = wasConfirmed ? Math.max(0, c.saldo - existingOrder.total) : c.saldo;
             const cancelTx = {
               id: `tx-anul-${Date.now()}`,
               fecha: new Date().toISOString().split('T')[0],
-              concepto: `[ANULADO] Cancelación ${existingOrder.numeroOP}`,
+              concepto: `[ANULADO] Cancelación ${existingOrder.numeroOP}${wasConfirmed ? '' : ' (Reserva)'}`,
               debe: 0,
-              haber: existingOrder.total,
+              haber: wasConfirmed ? existingOrder.total : 0,
               saldo: newBalance,
             };
             return {
@@ -1286,9 +1404,132 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
+  const editSupplierTransaction = (
+    supplierId: number | string,
+    txId: string,
+    updatedFields: Partial<SupplierHistory>
+  ) => {
+    setSuppliers((prev) =>
+      prev.map((s) => {
+        if (s.id === supplierId || String(s.id) === String(supplierId)) {
+          const updatedHist = s.historial.map((tx) => {
+            if (tx.id === txId) {
+              return { ...tx, ...updatedFields };
+            }
+            return tx;
+          });
+          let runningBalance = 0;
+          const recalculated = [...updatedHist].reverse().map((tx) => {
+            runningBalance += (tx.debe || 0) - (tx.haber || 0);
+            return { ...tx, saldo: runningBalance };
+          }).reverse();
+
+          return {
+            ...s,
+            saldo: runningBalance,
+            historial: recalculated,
+          };
+        }
+        return s;
+      })
+    );
+  };
+
+  const cancelSupplierTransaction = (supplierId: number | string, txId: string) => {
+    setSuppliers((prev) =>
+      prev.map((s) => {
+        if (s.id === supplierId || String(s.id) === String(supplierId)) {
+          const updatedHist = s.historial.filter((tx) => tx.id !== txId);
+          let runningBalance = 0;
+          const recalculated = [...updatedHist].reverse().map((tx) => {
+            runningBalance += (tx.debe || 0) - (tx.haber || 0);
+            return { ...tx, saldo: runningBalance };
+          }).reverse();
+
+          return {
+            ...s,
+            saldo: runningBalance,
+            historial: recalculated,
+          };
+        }
+        return s;
+      })
+    );
+  };
+
+  const addProductLot = (
+    productId: number | string,
+    lote: string,
+    vencimiento: string,
+    cantidad: number
+  ) => {
+    setProducts((prev) =>
+      prev.map((p) => {
+        if (p.id === productId || String(p.id) === String(productId)) {
+          const existingLotes = p.lotes || [];
+          const foundIdx = existingLotes.findIndex((l) => l.lote === lote);
+          let newLotes = [...existingLotes];
+          if (foundIdx >= 0) {
+            newLotes[foundIdx] = {
+              ...newLotes[foundIdx],
+              vencimiento: vencimiento || newLotes[foundIdx].vencimiento,
+              cantidadStock: (newLotes[foundIdx].cantidadStock || 0) + cantidad,
+            };
+          } else {
+            newLotes.push({
+              lote,
+              vencimiento: vencimiento || new Date(Date.now() + 180 * 86400000).toISOString().split('T')[0],
+              cantidadStock: cantidad,
+            });
+          }
+
+          const isBandeja = p.tipo === 'Bandeja';
+          return {
+            ...p,
+            stockBandejas: isBandeja ? (p.stockBandejas || 0) + cantidad : p.stockBandejas,
+            stockGranelKg: !isBandeja ? (p.stockGranelKg || 0) + cantidad : p.stockGranelKg,
+            lotes: newLotes,
+            loteDefault: lote,
+            vencimientoDefault: vencimiento || p.vencimientoDefault,
+          };
+        }
+        return p;
+      })
+    );
+  };
+
+  const deductProductLot = (
+    productId: number | string,
+    lote: string,
+    cantidad: number
+  ) => {
+    setProducts((prev) =>
+      prev.map((p) => {
+        if (p.id === productId || String(p.id) === String(productId)) {
+          if (!p.lotes || p.lotes.length === 0) return p;
+          const newLotes = p.lotes.map((l) => {
+            if (l.lote === lote) {
+              return {
+                ...l,
+                cantidadStock: Math.max(0, (l.cantidadStock || 0) - cantidad),
+              };
+            }
+            return l;
+          });
+          return { ...p, lotes: newLotes };
+        }
+        return p;
+      })
+    );
+  };
+
   // System Config Actions
   const updateSystemConfig = (newConfig: Partial<AppSystemConfig>) => {
-    setSystemConfig((prev) => ({ ...prev, ...newConfig }));
+    setSystemConfig((prev) => {
+      const updated = { ...prev, ...newConfig };
+      syncDocumentToFirestore('systemConfig', 'main', updated);
+      return updated;
+    });
   };
 
   // Products ABM
@@ -1526,7 +1767,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setRawMaterials((prev) =>
           prev.map((rm) => {
             if (rm.id === insumoId || String(rm.id) === String(insumoId) || rm.nombre.toLowerCase().includes(i.insumoNombre.toLowerCase())) {
-              return rm;
+              const currentStock = rm.stockActual !== undefined ? rm.stockActual : 100;
+              return {
+                ...rm,
+                stockActual: Math.max(0, currentStock - requiredTotal),
+              };
             }
             return rm;
           })
@@ -1715,6 +1960,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteSupplier,
         registerSupplierPayment,
         registerSupplierInvoice,
+        editSupplierTransaction,
+        cancelSupplierTransaction,
+        addProductLot,
+        deductProductLot,
         updateSystemConfig,
         addRawMaterial,
         updateRawMaterial,

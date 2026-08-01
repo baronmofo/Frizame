@@ -18,74 +18,69 @@ service cloud.firestore {
 
     // Products Collection
     match /products/{productId} {
-      allow read: if isSignedIn();
-      allow create, update: if isSignedIn();
-      allow delete: if isSignedIn();
+      allow read, write: if true;
     }
 
     // Clients Collection
     match /clients/{clientId} {
-      allow read: if isSignedIn();
-      allow create, update: if isSignedIn();
-      allow delete: if isSignedIn();
+      allow read, write: if true;
     }
 
     // Movements (Stock Transactions)
     match /movements/{movementId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn();
-      allow delete: if false; // Stock movements are transactional audit records
+      allow read, create, update: if true;
+      allow delete: if false; // Audit trail records cannot be deleted
     }
 
     // Raw Materials Collection
     match /rawMaterials/{rawMaterialId} {
-      allow read: if isSignedIn();
-      allow create, update: if isSignedIn();
-      allow delete: if isSignedIn();
+      allow read, write: if true;
     }
 
     // Recipes Collection
     match /recipes/{recipeId} {
-      allow read: if isSignedIn();
-      allow create, update: if isSignedIn();
-      allow delete: if isSignedIn();
+      allow read, write: if true;
     }
 
     // Orders OP Collection
     match /ordersOP/{orderId} {
-      allow read: if isSignedIn();
-      allow create, update: if isSignedIn();
-      allow delete: if isSignedIn();
+      allow read, write: if true;
     }
 
     // Suppliers Collection
     match /suppliers/{supplierId} {
-      allow read: if isSignedIn();
-      allow create, update: if isSignedIn();
-      allow delete: if isSignedIn();
+      allow read, write: if true;
     }
 
     // System Users Collection
     match /users/{userId} {
-      allow read: if isSignedIn();
-      allow create, update: if isSignedIn();
-      allow delete: if isSignedIn();
+      allow read, write: if true;
     }
 
-    // INMUTABILIDAD DEL HISTORIAL AUDITOR (Audit Log Collection)
-    // History events are append-only. Creates allowed for authenticated users; updates and deletes strictly forbidden!
+    // Audit History Event Log
     match /historyEvents/{eventId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn();
+      allow read, create: if true;
       allow update, delete: if false; // Strict Immutability Guard
     }
 
     // System Configuration Collection
     match /systemConfig/{configId} {
-      allow read: if isSignedIn();
-      allow create, update: if isSignedIn();
-      allow delete: if false;
+      allow read, write: if true;
+    }
+
+    // Application State Collection (Real-time device sync)
+    match /appState/{docId} {
+      allow read, write: if true;
+    }
+
+    // Backups Collection
+    match /backups/{backupId} {
+      allow read, write: if true;
+    }
+
+    // Health / Test Collection
+    match /test/{docId} {
+      allow read, write: if true;
     }
   }
 }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
-import { ShoppingBag, X, Plus, Trash2, Check, Printer } from 'lucide-react';
+import { ShoppingBag, X, Plus, Trash2, Check, Printer, Calendar, Tag } from 'lucide-react';
+import { SearchableSelect, SelectOption } from '../common/SearchableSelect';
 
 interface NotaCompraItem {
   id: string;
@@ -11,6 +12,8 @@ interface NotaCompraItem {
   cantidad: number;
   costoUnitario: number;
   subtotal: number;
+  lote?: string;
+  vencimiento?: string;
 }
 
 interface PrefilledItemData {
@@ -32,7 +35,7 @@ export const NotaCompraModal: React.FC<NotaCompraModalProps> = ({
   onClose,
   prefilledItem,
 }) => {
-  const { suppliers, rawMaterials, products, registerSupplierInvoice, updateRawMaterialCosto } = useApp();
+  const { suppliers, rawMaterials, products, registerSupplierInvoice, updateRawMaterialCosto, addProductLot } = useApp();
 
   const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0]);
   const [selectedSupplierId, setSelectedSupplierId] = useState<number | string>('');
@@ -45,6 +48,8 @@ export const NotaCompraModal: React.FC<NotaCompraModalProps> = ({
   const [selectedItemId, setSelectedItemId] = useState<number | string>('');
   const [cantidadInput, setCantidadInput] = useState<string>('1');
   const [costoInput, setCostoInput] = useState<string>('0');
+  const [loteInput, setLoteInput] = useState<string>('');
+  const [vencimientoInput, setVencimientoInput] = useState<string>('');
 
   const [isSuccess, setIsSuccess] = useState(false);
   const [savedReceiptData, setSavedReceiptData] = useState<any>(null);
@@ -169,10 +174,14 @@ export const NotaCompraModal: React.FC<NotaCompraModalProps> = ({
       cantidad: cantNum,
       costoUnitario: costoNum,
       subtotal: cantNum * costoNum,
+      lote: loteInput.trim() || undefined,
+      vencimiento: vencimientoInput.trim() || undefined,
     };
 
     setItems((prev) => [...prev, newItem]);
     setCantidadInput('1');
+    setLoteInput('');
+    setVencimientoInput('');
   };
 
   const handleRemoveItem = (id: string) => {
@@ -195,10 +204,13 @@ export const NotaCompraModal: React.FC<NotaCompraModalProps> = ({
     // 1. Register invoice in supplier balance
     registerSupplierInvoice(supplier.id, totalFinal, conceptoStr, fecha);
 
-    // 2. Update costs of raw materials if updated
+    // 2. Update costs and lots of raw materials and products
     items.forEach((it) => {
       if (it.type === 'insumo') {
         updateRawMaterialCosto(it.itemId, it.costoUnitario);
+      }
+      if (it.lote) {
+        addProductLot(it.itemId, it.lote, it.vencimiento || '', it.cantidad);
       }
     });
 
@@ -301,19 +313,16 @@ export const NotaCompraModal: React.FC<NotaCompraModalProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="block font-semibold text-gray-700 mb-1">Proveedor *</label>
-                <select
+                <SearchableSelect
                   value={selectedSupplierId}
-                  onChange={(e) => setSelectedSupplierId(e.target.value)}
-                  className="w-full p-2 border border-[#D1E3EB] rounded-lg bg-white text-gray-800 font-medium"
-                  required
-                >
-                  <option value="" disabled>-- Seleccionar Proveedor --</option>
-                  {suppliers.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.nombre} {s.rubro ? `(${s.rubro})` : ''}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setSelectedSupplierId(val)}
+                  placeholder="-- Seleccionar Proveedor --"
+                  options={suppliers.map((s) => ({
+                    value: s.id,
+                    label: `${s.nombre}${s.rubro ? ` (${s.rubro})` : ''}`,
+                    sublabel: s.cuit ? `CUIT: ${s.cuit}` : undefined,
+                  }))}
+                />
               </div>
 
               <div>
@@ -322,7 +331,7 @@ export const NotaCompraModal: React.FC<NotaCompraModalProps> = ({
                   type="date"
                   value={fecha}
                   onChange={(e) => setFecha(e.target.value)}
-                  className="w-full p-2 border border-[#D1E3EB] rounded-lg bg-white"
+                  className="w-full p-2.5 border border-[#D1E3EB] rounded-lg bg-white font-medium"
                   required
                 />
               </div>
@@ -334,7 +343,7 @@ export const NotaCompraModal: React.FC<NotaCompraModalProps> = ({
                   placeholder="Ej: Factura A-0001-1234"
                   value={observaciones}
                   onChange={(e) => setObservaciones(e.target.value)}
-                  className="w-full p-2 border border-[#D1E3EB] rounded-lg bg-white"
+                  className="w-full p-2.5 border border-[#D1E3EB] rounded-lg bg-white"
                 />
               </div>
             </div>
@@ -368,25 +377,26 @@ export const NotaCompraModal: React.FC<NotaCompraModalProps> = ({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-end">
-                <div className="sm:col-span-5">
+                <div className="sm:col-span-4">
                   <label className="block font-semibold text-gray-700 mb-0.5">Seleccionar Ítem</label>
-                  <select
+                  <SearchableSelect
                     value={selectedItemId}
-                    onChange={(e) => handleItemSelectChange(e.target.value, itemType)}
-                    className="w-full p-2 border border-[#D1E3EB] rounded-lg bg-white font-medium"
-                  >
-                    {itemType === 'insumo'
-                      ? rawMaterials.map((m) => (
-                          <option key={m.id} value={m.id}>
-                            {m.nombre} [{m.presentacion}] - ${m.costo}
-                          </option>
-                        ))
-                      : products.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            [{p.codigo}] {p.nombre} - ${p.costo}
-                          </option>
-                        ))}
-                  </select>
+                    onChange={(val) => handleItemSelectChange(val, itemType)}
+                    placeholder="Seleccionar..."
+                    options={
+                      itemType === 'insumo'
+                        ? rawMaterials.map((m) => ({
+                            value: m.id,
+                            label: m.nombre,
+                            sublabel: `Presentación: ${m.presentacion} - Costo: $${m.costo}`,
+                          }))
+                        : products.map((p) => ({
+                            value: p.id,
+                            label: `[${p.codigo}] ${p.nombre}`,
+                            sublabel: `Tipo: ${p.tipo} - Costo: $${p.costo}`,
+                          }))
+                    }
+                  />
                 </div>
 
                 <div className="sm:col-span-2">
@@ -397,11 +407,11 @@ export const NotaCompraModal: React.FC<NotaCompraModalProps> = ({
                     step="any"
                     value={cantidadInput}
                     onChange={(e) => setCantidadInput(e.target.value)}
-                    className="w-full p-2 border border-[#D1E3EB] rounded-lg bg-white text-center font-bold"
+                    className="w-full p-2 border border-[#D1E3EB] rounded-lg bg-white text-center font-bold text-xs"
                   />
                 </div>
 
-                <div className="sm:col-span-3">
+                <div className="sm:col-span-2">
                   <label className="block font-semibold text-gray-700 mb-0.5">Costo Unit. ($)</label>
                   <input
                     type="number"
@@ -409,20 +419,41 @@ export const NotaCompraModal: React.FC<NotaCompraModalProps> = ({
                     step="any"
                     value={costoInput}
                     onChange={(e) => setCostoInput(e.target.value)}
-                    className="w-full p-2 border border-[#D1E3EB] rounded-lg bg-white text-right font-bold text-emerald-800"
+                    className="w-full p-2 border border-[#D1E3EB] rounded-lg bg-white text-right font-bold text-emerald-800 text-xs"
                   />
                 </div>
 
                 <div className="sm:col-span-2">
-                  <button
-                    type="button"
-                    onClick={handleAddItem}
-                    className="w-full p-2 bg-[#017E9A] hover:bg-[#016278] text-white font-brand font-bold rounded-lg flex items-center justify-center gap-1 transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Agregar</span>
-                  </button>
+                  <label className="block font-semibold text-gray-700 mb-0.5">Lote (Opcional)</label>
+                  <input
+                    type="text"
+                    placeholder="Ej: L2408"
+                    value={loteInput}
+                    onChange={(e) => setLoteInput(e.target.value)}
+                    className="w-full p-2 border border-[#D1E3EB] rounded-lg bg-white text-xs font-mono font-bold text-[#0B4F6C]"
+                  />
                 </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block font-semibold text-gray-700 mb-0.5">Vencimiento</label>
+                  <input
+                    type="date"
+                    value={vencimientoInput}
+                    onChange={(e) => setVencimientoInput(e.target.value)}
+                    className="w-full p-2 border border-[#D1E3EB] rounded-lg bg-white text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-1">
+                <button
+                  type="button"
+                  onClick={handleAddItem}
+                  className="px-4 py-2 bg-[#017E9A] hover:bg-[#016278] text-white font-brand font-bold rounded-lg flex items-center justify-center gap-1 transition-colors text-xs"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Agregar a la Nota</span>
+                </button>
               </div>
             </div>
 
@@ -433,6 +464,7 @@ export const NotaCompraModal: React.FC<NotaCompraModalProps> = ({
                   <tr>
                     <th className="p-2">Tipo</th>
                     <th className="p-2">Ítem / Detalle</th>
+                    <th className="p-2">Lote / Venc.</th>
                     <th className="p-2 text-center">Cant.</th>
                     <th className="p-2 text-right">Costo U.</th>
                     <th className="p-2 text-right">Subtotal</th>
@@ -442,7 +474,7 @@ export const NotaCompraModal: React.FC<NotaCompraModalProps> = ({
                 <tbody className="divide-y divide-[#D1E3EB]">
                   {items.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="p-4 text-center text-gray-500 italic">
+                      <td colSpan={7} className="p-4 text-center text-gray-500 italic">
                         No se han agregado ítems a esta nota de compra.
                       </td>
                     </tr>
@@ -454,6 +486,15 @@ export const NotaCompraModal: React.FC<NotaCompraModalProps> = ({
                         </td>
                         <td className="p-2 font-bold text-[#0B4F6C]">
                           {it.nombre} <span className="font-normal text-gray-500">({it.presentacion})</span>
+                        </td>
+                        <td className="p-2 font-mono text-[11px]">
+                          {it.lote ? (
+                            <span className="px-1.5 py-0.5 bg-blue-50 text-blue-900 font-bold rounded border border-blue-200">
+                              {it.lote} {it.vencimiento ? `(Venc: ${it.vencimiento})` : ''}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 font-normal">Sin lote</span>
+                          )}
                         </td>
                         <td className="p-2 text-center font-bold">{it.cantidad}</td>
                         <td className="p-2 text-right font-medium">${it.costoUnitario.toLocaleString('es-AR')}</td>

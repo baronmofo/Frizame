@@ -22,6 +22,7 @@ import { NuevaRecetaModal } from './components/modals/NuevaRecetaModal';
 import { NuevoProductoModal } from './components/modals/NuevoProductoModal';
 import { UserManualModal } from './components/modals/UserManualModal';
 import { LoginScreen } from './components/LoginScreen';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { OrderOP, Client, Product } from './types';
 
 function AppContent() {
@@ -85,6 +86,25 @@ function AppContent() {
       .bg-\\[\\#F4F8FA\\] { background-color: ${bg} !important; }
       .bg-\\[\\#1C2D37\\] { background-color: ${text} !important; }
       .text-\\[\\#1C2D37\\] { color: ${text} !important; }
+
+      ${
+        theme === 'dark'
+          ? `
+        .text-\\[\\#0B4F6C\\] { color: #38BDF8 !important; }
+        .text-\\[\\#017E9A\\] { color: #38BDF8 !important; }
+        .text-\\[\\#1C2D37\\] { color: #F1F5F9 !important; }
+        .bg-\\[\\#0B4F6C\\] { background-color: #0F172A !important; }
+        .bg-\\[\\#E8F4F8\\] { background-color: #1E293B !important; color: #F8FAFC !important; }
+        .bg-\\[\\#F4F8FA\\] { background-color: #0F172A !important; }
+        .bg-white { background-color: #1E293B !important; color: #F8FAFC !important; }
+        .text-gray-900, .text-gray-800, .text-gray-700, .text-gray-600, .text-slate-900, .text-slate-800, .text-slate-700, .text-amber-900, .text-amber-800, .text-amber-950 { color: #F8FAFC !important; }
+        .text-gray-500, .text-slate-500, .text-gray-400 { color: #CBD5E1 !important; }
+        .border-gray-100, .border-gray-200, .border-gray-300, .border-slate-200, .border-\\[\\#D1E3EB\\] { border-color: #334155 !important; }
+        input, select, textarea { background-color: #0F172A !important; color: #F8FAFC !important; border-color: #334155 !important; }
+        .bg-gray-50, .bg-slate-50, .bg-amber-50, .bg-blue-50, .bg-sky-50 { background-color: #0F172A !important; }
+      `
+          : ''
+      }
     `;
   }, [systemConfig?.themePalette]);
 
@@ -197,62 +217,64 @@ function AppContent() {
 
       {/* Main Content View Container */}
       <main className="no-print max-w-7xl w-full mx-auto px-4 py-6 flex-1">
-        {activeTab === 'mod-dashboard' && (
-          <Dashboard
-            setActiveTab={setActiveTab}
-            openVentaModal={handleOpenNewVenta}
-            openNotaCompraModal={handleOpenNotaCompra}
-            onSelectCliente={(id) => setSelectedClientId(id)}
-            onNavigateToProveedores={() => {
-              setCostosSubTab('PROVEEDORES');
-              setActiveTab('mod-costos');
-            }}
-          />
-        )}
+        <ErrorBoundary fallbackTitle="Ocurrió un error en el módulo activo.">
+          {activeTab === 'mod-dashboard' && (
+            <Dashboard
+              setActiveTab={setActiveTab}
+              openVentaModal={handleOpenNewVenta}
+              openNotaCompraModal={handleOpenNotaCompra}
+              onSelectCliente={(id) => setSelectedClientId(id)}
+              onNavigateToProveedores={() => {
+                setCostosSubTab('PROVEEDORES');
+                setActiveTab('mod-costos');
+              }}
+            />
+          )}
 
-        {activeTab === 'mod-stock' && (
-          <StockModule
-            openVentaModal={handleOpenNewVenta}
-            setActiveTab={setActiveTab}
-            onSelectOrderOP={handleSelectOrderOP}
-            onEditOrderOP={handleEditOrderOP}
-          />
-        )}
+          {activeTab === 'mod-stock' && (
+            <StockModule
+              openVentaModal={handleOpenNewVenta}
+              setActiveTab={setActiveTab}
+              onSelectOrderOP={handleSelectOrderOP}
+              onEditOrderOP={handleEditOrderOP}
+            />
+          )}
 
-        {activeTab === 'mod-clientes' && (
-          <ClientsModule
-            selectedClientId={selectedClientId}
-            setSelectedClientId={setSelectedClientId}
-            openNuevoClienteModal={handleOpenNuevoCliente}
-            onEditClient={handleEditClient}
-            openRegistrarPagoModal={handleOpenRegistrarPago}
-          />
-        )}
+          {activeTab === 'mod-clientes' && (
+            <ClientsModule
+              selectedClientId={selectedClientId}
+              setSelectedClientId={setSelectedClientId}
+              openNuevoClienteModal={handleOpenNuevoCliente}
+              onEditClient={handleEditClient}
+              openRegistrarPagoModal={handleOpenRegistrarPago}
+            />
+          )}
 
-        {activeTab === 'mod-rotulos' && (
-          <RotulosModule onTriggerPrint={handleTriggerPrint} />
-        )}
+          {activeTab === 'mod-rotulos' && (
+            <RotulosModule onTriggerPrint={handleTriggerPrint} />
+          )}
 
-        {activeTab === 'mod-fraccionamiento' && (
-          <FraccionamientoModule
-            openNuevaRecetaModal={handleOpenNuevaReceta}
-            openNotaCompraModal={handleOpenNotaCompra}
-            openNuevoProductoModal={handleOpenNuevoProducto}
-            onEditProduct={handleEditProduct}
-          />
-        )}
+          {activeTab === 'mod-fraccionamiento' && (
+            <FraccionamientoModule
+              openNuevaRecetaModal={handleOpenNuevaReceta}
+              openNotaCompraModal={handleOpenNotaCompra}
+              openNuevoProductoModal={handleOpenNuevoProducto}
+              onEditProduct={handleEditProduct}
+            />
+          )}
 
-        {activeTab === 'mod-costos' && (
-          <CostosModule
-            openNuevoInsumoModal={() => setIsNuevoInsumoModalOpen(true)}
-            openNotaCompraModal={handleOpenNotaCompra}
-            defaultSubTab={costosSubTab}
-          />
-        )}
+          {activeTab === 'mod-costos' && (
+            <CostosModule
+              openNuevoInsumoModal={() => setIsNuevoInsumoModalOpen(true)}
+              openNotaCompraModal={handleOpenNotaCompra}
+              defaultSubTab={costosSubTab}
+            />
+          )}
 
-        {activeTab === 'mod-configuracion' && (
-          <ConfiguracionModule />
-        )}
+          {activeTab === 'mod-configuracion' && (
+            <ConfiguracionModule />
+          )}
+        </ErrorBoundary>
       </main>
 
       {/* Footer */}

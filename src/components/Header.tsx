@@ -1,19 +1,17 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import { useApp } from '../context/AppContext';
 import { FrizameLogo } from './FrizameLogo';
 import {
-  PieChart,
-  Boxes,
+  LayoutDashboard,
+  Scale,
   Users,
   Printer,
-  RotateCw,
   Calculator,
   ShieldCheck,
-  Download,
-  Upload,
   Settings,
   LogOut,
   User as UserIcon,
+  Boxes,
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -22,29 +20,7 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
-  const { role, setRole, exportData, importData, currentUser, requireLogin, logoutUser } = useApp();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const jsonData = JSON.parse(event.target?.result as string);
-        const success = importData(jsonData);
-        if (success) {
-          alert('¡Datos importados con éxito!');
-        } else {
-          alert('El archivo no tiene la estructura correcta de Frizame.');
-        }
-      } catch (err) {
-        alert('Error al leer el archivo JSON.');
-      }
-    };
-    reader.readAsText(file);
-  };
+  const { role, currentUser, requireLogin, logoutUser } = useApp();
 
   return (
     <header className="no-print bg-gradient-to-r from-[#0B4F6C] to-[#083b52] text-white px-3 sm:px-4 py-2.5 sm:py-3 shadow-md sticky top-0 z-50 w-full max-w-full overflow-x-hidden">
@@ -68,7 +44,7 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
                 : 'text-sky-100 hover:bg-white/10 hover:text-white'
             }`}
           >
-            <PieChart className="w-5 h-5 sm:w-4 sm:h-4 shrink-0" />
+            <LayoutDashboard className="w-5 h-5 sm:w-4 sm:h-4 shrink-0" />
             <span className="hidden sm:inline">Inicio</span>
           </button>
 
@@ -99,6 +75,34 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
           </button>
 
           <button
+            onClick={() => setActiveTab('mod-fraccionamiento')}
+            title="Productos"
+            className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl font-brand text-xs sm:text-sm font-semibold transition-all shrink-0 snap-start active:scale-95 touch-manipulation ${
+              activeTab === 'mod-fraccionamiento'
+                ? 'bg-[#017E9A] text-white shadow-md border border-sky-300/30'
+                : 'text-sky-100 hover:bg-white/10 hover:text-white'
+            }`}
+          >
+            <Scale className="w-5 h-5 sm:w-4 sm:h-4 shrink-0" />
+            <span className="hidden sm:inline">Productos</span>
+          </button>
+
+          {role === 'Admin' && (
+            <button
+              onClick={() => setActiveTab('mod-costos')}
+              title="Costos"
+              className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl font-brand text-xs sm:text-sm font-semibold transition-all shrink-0 snap-start active:scale-95 touch-manipulation ${
+                activeTab === 'mod-costos'
+                  ? 'bg-[#017E9A] text-white shadow-md border border-sky-300/30'
+                  : 'text-sky-100 hover:bg-white/10 hover:text-white'
+              }`}
+            >
+              <Calculator className="w-5 h-5 sm:w-4 sm:h-4 shrink-0" />
+              <span className="hidden sm:inline">Costos</span>
+            </button>
+          )}
+
+          <button
             onClick={() => setActiveTab('mod-rotulos')}
             title="Imprimir"
             className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl font-brand text-xs sm:text-sm font-semibold transition-all shrink-0 snap-start active:scale-95 touch-manipulation ${
@@ -110,34 +114,6 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
             <Printer className="w-5 h-5 sm:w-4 sm:h-4 shrink-0" />
             <span className="hidden sm:inline">Imprimir</span>
           </button>
-
-          <button
-            onClick={() => setActiveTab('mod-fraccionamiento')}
-            title="Productos"
-            className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl font-brand text-xs sm:text-sm font-semibold transition-all shrink-0 snap-start active:scale-95 touch-manipulation ${
-              activeTab === 'mod-fraccionamiento'
-                ? 'bg-[#017E9A] text-white shadow-md border border-sky-300/30'
-                : 'text-sky-100 hover:bg-white/10 hover:text-white'
-            }`}
-          >
-            <RotateCw className="w-5 h-5 sm:w-4 sm:h-4 shrink-0" />
-            <span className="hidden sm:inline">Productos</span>
-          </button>
-
-          {role === 'Admin' && (
-            <button
-              onClick={() => setActiveTab('mod-costos')}
-              title="Proveedores"
-              className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl font-brand text-xs sm:text-sm font-semibold transition-all shrink-0 snap-start active:scale-95 touch-manipulation ${
-                activeTab === 'mod-costos'
-                  ? 'bg-[#017E9A] text-white shadow-md border border-sky-300/30'
-                  : 'text-sky-100 hover:bg-white/10 hover:text-white'
-              }`}
-            >
-              <Calculator className="w-5 h-5 sm:w-4 sm:h-4 shrink-0" />
-              <span className="hidden sm:inline">Proveedores</span>
-            </button>
-          )}
 
           <button
             onClick={() => setActiveTab('mod-configuracion')}
@@ -153,7 +129,7 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
           </button>
         </nav>
 
-        {/* Role Selector & Backup Actions */}
+        {/* Role Selector & User Actions */}
         <div className="flex items-center gap-2">
           {/* User Role Badge (Role is managed in Config) */}
           <div className="bg-white/15 px-3 py-1.5 rounded-xl flex items-center gap-1.5 text-white text-xs font-semibold border border-white/10 shrink-0">
@@ -171,29 +147,6 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
               </span>
             </div>
           )}
-
-          <button
-            onClick={exportData}
-            title="Respaldar Datos (JSON)"
-            className="p-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors border border-white/10"
-          >
-            <Download className="w-4 h-4" />
-          </button>
-
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            title="Importar Backup"
-            className="p-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors border border-white/10"
-          >
-            <Upload className="w-4 h-4" />
-          </button>
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            accept=".json"
-            className="hidden"
-          />
 
           {(requireLogin || currentUser) && (
             <button

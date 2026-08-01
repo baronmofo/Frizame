@@ -538,6 +538,17 @@ export const initialSystemConfig: AppSystemConfig = {
     { id: 'cat-otros', nombre: 'Otros', tipo: 'Otro', activo: true, mermaPct: 0.0 }
   ],
   overheadTypes: ['Transporte y Flete', 'Mano de Obra Directa', 'Energía y Gas', 'Packaging Adicional', 'Mermas y Mantenimiento'],
+  companyData: {
+    razonSocial: 'Frizame - Congelados Premium',
+    rne: '02-034.567',
+    rnpa: '02-589.123',
+    direccion: 'Av. Rondeau 1024, CABA',
+    telefono: '1161746860',
+    instagram: '@frizame.ok',
+    facebook: '@frizame.ok',
+    whatsapp: '1161746860',
+    companyLogoUrl: '',
+  },
   googleDriveFolderId: '',
   autoBackupEnabled: true,
   mermaDefaultPct: 3.5,

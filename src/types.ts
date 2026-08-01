@@ -244,10 +244,23 @@ export interface SystemUser {
   ultimoAcceso: string;
 }
 
+export interface CompanyInfo {
+  razonSocial?: string;
+  rne?: string;
+  rnpa?: string;
+  direccion?: string;
+  telefono?: string;
+  instagram?: string;
+  facebook?: string;
+  whatsapp?: string;
+  companyLogoUrl?: string;
+}
+
 export interface AppSystemConfig {
   codeRules: CodeRuleConfig[];
   productCategories: (string | CategoryConfigItem)[];
   overheadTypes: string[];
+  companyData?: CompanyInfo;
   diasAlertaDesactualizacionCosto?: number;
   margenComercioSugerido?: number;
   margenParticularSugerido?: number;

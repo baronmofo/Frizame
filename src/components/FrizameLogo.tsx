@@ -1,66 +1,105 @@
 import React from 'react';
+import { useApp } from '../context/AppContext';
 
 interface FrizameLogoProps {
   className?: string;
   variant?: 'full' | 'header' | 'badge' | 'mono';
   size?: 'sm' | 'md' | 'lg' | 'xl';
+  logoUrl?: string;
 }
 
-/**
- * Official Frizame Logo Component
- * Reproduces the official brand logo featuring the retro ice cube running character
- * inside a rounded double-stroke badge with bold Frizame typography.
- */
 export const FrizameLogo: React.FC<FrizameLogoProps> = ({
   className = 'h-10',
   variant = 'full',
+  logoUrl,
 }) => {
+  let customLogoUrl = logoUrl;
+
+  try {
+    const { systemConfig } = useApp();
+    if (!customLogoUrl && systemConfig?.companyData?.companyLogoUrl) {
+      customLogoUrl = systemConfig.companyData.companyLogoUrl;
+    }
+  } catch (e) {
+    // If rendered outside AppProvider
+  }
+
   if (variant === 'header') {
     return (
       <div className={`flex items-center gap-2.5 ${className}`}>
-        {/* Ice Cube Character Emblem */}
-        <div className="relative w-10 h-10 shrink-0 bg-white rounded-xl p-0.5 border-2 border-[#017E9A] shadow-md flex items-center justify-center overflow-hidden">
-          <svg viewBox="0 0 100 100" className="w-full h-full">
-            {/* Double Frame */}
-            <rect x="5" y="5" width="90" height="90" rx="18" fill="#FFFFFF" stroke="#0B4F6C" strokeWidth="4" />
-            <rect x="10" y="10" width="80" height="80" rx="14" fill="none" stroke="#017E9A" strokeWidth="1.5" />
-            
-            {/* Ice Cube Body */}
-            <path d="M 32 25 L 68 25 L 75 38 L 25 38 Z" fill="#E8F4F8" stroke="#0B4F6C" strokeWidth="3" strokeLinejoin="round" />
-            <rect x="25" y="38" width="50" height="32" rx="4" fill="#FFFFFF" stroke="#0B4F6C" strokeWidth="3" />
-            
-            {/* Eyes */}
-            <ellipse cx="40" cy="50" rx="4" ry="7" fill="#0B4F6C" />
-            <ellipse cx="60" cy="50" rx="4" ry="7" fill="#0B4F6C" />
-            <circle cx="41" cy="48" r="1.5" fill="#FFFFFF" />
-            <circle cx="61" cy="48" r="1.5" fill="#FFFFFF" />
-            
-            {/* Smile */}
-            <path d="M 44 61 Q 50 66 56 61" fill="none" stroke="#0B4F6C" strokeWidth="2.5" strokeLinecap="round" />
-            
-            {/* Sweat / Ice Drops */}
-            <circle cx="70" cy="44" r="1.5" fill="#017E9A" />
-            <circle cx="73" cy="52" r="1.2" fill="#017E9A" />
-            
-            {/* Running legs */}
-            <path d="M 40 70 Q 35 80 28 82" fill="none" stroke="#0B4F6C" strokeWidth="3" strokeLinecap="round" />
-            <path d="M 60 70 Q 65 80 72 82" fill="none" stroke="#0B4F6C" strokeWidth="3" strokeLinecap="round" />
-            
-            {/* Shoes */}
-            <ellipse cx="26" cy="83" rx="6" ry="3" fill="#0B4F6C" />
-            <ellipse cx="74" cy="83" rx="6" ry="3" fill="#0B4F6C" />
-            
-            {/* Water Ripple Base */}
-            <path d="M 20 88 Q 50 93 80 88" fill="none" stroke="#017E9A" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-        </div>
+        {/* Left emblem or custom logo image */}
+        {customLogoUrl ? (
+          <div className="relative h-10 w-auto shrink-0 flex items-center justify-center overflow-hidden">
+            <img
+              src={customLogoUrl}
+              alt="Logotipo Frizame"
+              className="h-10 w-auto object-contain max-w-[120px]"
+            />
+          </div>
+        ) : (
+          <div className="relative w-10 h-10 shrink-0 bg-white rounded-xl p-0.5 border-2 border-[#017E9A] shadow-md flex items-center justify-center overflow-hidden">
+            <svg viewBox="0 0 100 100" className="w-full h-full">
+              {/* Double Frame */}
+              <rect x="5" y="5" width="90" height="90" rx="18" fill="#FFFFFF" stroke="#0B4F6C" strokeWidth="4" />
+              <rect x="10" y="10" width="80" height="80" rx="14" fill="none" stroke="#017E9A" strokeWidth="1.5" />
+              
+              {/* Ice Cube Body */}
+              <path d="M 32 25 L 68 25 L 75 38 L 25 38 Z" fill="#E8F4F8" stroke="#0B4F6C" strokeWidth="3" strokeLinejoin="round" />
+              <rect x="25" y="38" width="50" height="32" rx="4" fill="#FFFFFF" stroke="#0B4F6C" strokeWidth="3" />
+              
+              {/* Eyes */}
+              <ellipse cx="40" cy="50" rx="4" ry="7" fill="#0B4F6C" />
+              <ellipse cx="60" cy="50" rx="4" ry="7" fill="#0B4F6C" />
+              <circle cx="41" cy="48" r="1.5" fill="#FFFFFF" />
+              <circle cx="61" cy="48" r="1.5" fill="#FFFFFF" />
+              
+              {/* Smile */}
+              <path d="M 44 61 Q 50 66 56 61" fill="none" stroke="#0B4F6C" strokeWidth="2.5" strokeLinecap="round" />
+              
+              {/* Sweat / Ice Drops */}
+              <circle cx="70" cy="44" r="1.5" fill="#017E9A" />
+              <circle cx="73" cy="52" r="1.2" fill="#017E9A" />
+              
+              {/* Running legs */}
+              <path d="M 40 70 Q 35 80 28 82" fill="none" stroke="#0B4F6C" strokeWidth="3" strokeLinecap="round" />
+              <path d="M 60 70 Q 65 80 72 82" fill="none" stroke="#0B4F6C" strokeWidth="3" strokeLinecap="round" />
+              
+              {/* Shoes */}
+              <ellipse cx="26" cy="83" rx="6" ry="3" fill="#0B4F6C" />
+              <ellipse cx="74" cy="83" rx="6" ry="3" fill="#0B4F6C" />
+              
+              {/* Water Ripple Base */}
+              <path d="M 20 88 Q 50 93 80 88" fill="none" stroke="#017E9A" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </div>
+        )}
 
-        {/* Typography */}
+        {/* Typography always maintained */}
         <div className="flex flex-col">
           <span className="font-brand font-extrabold text-2xl text-white tracking-wide leading-none">
             Frizame
           </span>
           <span className="text-[9px] text-[#A3D9E8] uppercase tracking-widest font-bold mt-0.5">
+            Congelados Premium
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  if (customLogoUrl) {
+    return (
+      <div className={`flex items-center gap-2 ${className}`}>
+        <img
+          src={customLogoUrl}
+          alt="Logotipo Empresa"
+          className="h-full w-auto object-contain max-h-12 max-w-[160px] rounded"
+        />
+        <div className="flex flex-col">
+          <span className="font-brand font-extrabold text-xl text-[#0B4F6C] tracking-wide leading-none">
+            Frizame
+          </span>
+          <span className="text-[9px] text-[#017E9A] uppercase tracking-widest font-bold mt-0.5">
             Congelados Premium
           </span>
         </div>

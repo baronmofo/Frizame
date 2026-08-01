@@ -94,11 +94,28 @@ export const RotulosModule: React.FC<RotulosModuleProps> = ({ onTriggerPrint }) 
     const cleanCode = codeStr.trim();
     const num = parseInt(cleanCode.replace(/\D/g, ''), 10);
 
+    // Dynamic code validation rules from config
+    const valRules = systemConfig?.codeValidationRules;
+    if (valRules && !isNaN(num)) {
+      if (cleanCat.includes('1xx') || cleanCat.includes('granel')) {
+        const r = valRules.granel;
+        if (r) return num >= r.min && num <= r.max;
+      }
+      if (cleanCat.includes('2xx') || cleanCat.includes('bandeja')) {
+        const r = valRules.bandeja;
+        if (r) return num >= r.min && num <= r.max;
+      }
+      if (cleanCat.includes('insumo') || cleanCat.includes('4xx')) {
+        const r = valRules.insumos;
+        if (r) return num >= r.min && num <= r.max;
+      }
+    }
+
     const rule = systemConfig?.codeRules?.find(
       (r: any) =>
         r.categoria === catName ||
-        cleanCat.includes(r.categoria.toLowerCase()) ||
-        r.categoria.toLowerCase().includes(cleanCat)
+        cleanCat.includes((r.categoria || '').toLowerCase()) ||
+        (r.categoria || '').toLowerCase().includes(cleanCat)
     );
 
     if (rule && !isNaN(num)) {
@@ -247,14 +264,6 @@ export const RotulosModule: React.FC<RotulosModuleProps> = ({ onTriggerPrint }) 
             Diseñe, configure y exporte rótulos, etiquetas, stickers y hojas A4/Legal para sus categorías.
           </p>
         </div>
-
-        <button
-          onClick={handlePrintClick}
-          className="px-5 py-2.5 bg-[#017E9A] hover:bg-[#016278] text-white font-brand font-bold text-xs sm:text-sm rounded-xl flex items-center gap-2 transition-all shadow-md shrink-0"
-        >
-          <Printer className="w-4 h-4" />
-          <span>Imprimir Configuración Actual</span>
-        </button>
       </div>
 
       {/* Main Grid */}
@@ -458,7 +467,7 @@ export const RotulosModule: React.FC<RotulosModuleProps> = ({ onTriggerPrint }) 
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Fecha Elaboración</label>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Fecha Vencimiento</label>
                     <input
                       type="date"
                       value={fechaElab}

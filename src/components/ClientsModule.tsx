@@ -79,13 +79,16 @@ export const ClientsModule: React.FC<ClientsModuleProps> = ({
     ) || clients[0];
 
   const generateMpQr = async () => {
-    if (!selectedClient || selectedClient.saldo <= 0) {
-      alert('El cliente seleccionado no tiene saldo pendiente por cobrar.');
+    if (!selectedClient) return;
+
+    if (showQrBox) {
+      setShowQrBox(false);
       return;
     }
 
     try {
-      const payload = `https://mpago.la/pos?monto=${selectedClient.saldo}&ref=${encodeURIComponent(
+      const montoCobro = selectedClient.saldo > 0 ? selectedClient.saldo : 0;
+      const payload = `https://mpago.la/pos?monto=${montoCobro}&ref=${encodeURIComponent(
         selectedClient.nombre
       )}`;
       const url = await QRCode.toDataURL(payload, { width: 180, margin: 1 });
@@ -114,7 +117,7 @@ export const ClientsModule: React.FC<ClientsModuleProps> = ({
         <div>
           <h2 className="font-brand font-bold text-2xl text-[#0B4F6C] flex items-center gap-2">
             <Users className="w-7 h-7 text-[#017E9A]" />
-            2. Agenda de Clientes / Cuentas Corrientes
+            Agenda de Clientes / Cuentas Corrientes
           </h2>
           <p className="text-sm text-[#607D8B]">
             Gestión de compradores, historial de pedidos, saldos pendientes y cobro mediante Código QR de Mercado Pago.
@@ -341,7 +344,7 @@ export const ClientsModule: React.FC<ClientsModuleProps> = ({
                       className="px-3 py-1.5 bg-[#017E9A] hover:bg-[#016278] text-white font-brand font-medium rounded-lg text-xs transition-colors flex items-center gap-1.5 shadow-sm"
                     >
                       <QrCode className="w-4 h-4" />
-                      <span>Cobrar QR MP</span>
+                      <span>QR MP</span>
                     </button>
 
                     <button

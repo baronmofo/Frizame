@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { OrderOP, Product } from '../types';
+import { getReservedQtyForProduct } from '../utils/stockUtils';
 import {
   Boxes,
   ShoppingCart,
@@ -571,44 +572,75 @@ export const StockModule: React.FC<StockModuleProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-[#D1E3EB]">
-              {pairedProducts.map((pair, idx) => (
-                <tr key={idx} className="hover:bg-[#E8F4F8]/40 transition-colors">
-                  <td className="p-3 font-semibold text-gray-800">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-mono text-xs text-[#0B4F6C] bg-[#E8F4F8] px-2 py-0.5 rounded font-bold border border-[#D1E3EB]">
-                        [{pair.bulk.codigo} ➔ {pair.tray?.codigo || '201'}]
-                      </span>
-                      <span>{pair.bulk.nombre.replace('X KG.', '').trim()}</span>
-                    </div>
-                  </td>
-                  <td className="p-3 text-center font-bold text-[#0B4F6C]">
-                    {pair.granelKg} <span className="text-xs font-normal text-gray-500">Kg</span>
-                  </td>
-                  <td className="p-3 text-center">
-                    <span
-                      className={`font-bold px-2.5 py-1 rounded-lg ${
-                        pair.bandejas <= 5
-                          ? 'bg-red-100 text-red-700 font-extrabold border border-red-200'
-                          : 'bg-sky-100 text-[#017E9A] border border-sky-200'
-                      }`}
-                    >
-                      {pair.bandejas} band.
-                    </span>
-                  </td>
-                  <td className="p-3 text-center">
-                    <span className="bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-lg text-xs font-bold inline-block">
-                      ~{pair.bandejasProducibles} bandejas
-                    </span>
-                  </td>
-                  {showValorizacion && (
-                    <td className="p-3 text-right font-bold text-emerald-700">
-                      ${Math.round(pair.valTotal).toLocaleString('es-AR')}
+              {pairedProducts.map((pair, idx) => {
+                const bulkReserved = getReservedQtyForProduct(pair.bulk, ordersOP);
+                const trayReserved = pair.tray ? getReservedQtyForProduct(pair.tray, ordersOP) : 0;
+
+                return (
+                  <tr key={idx} className="hover:bg-[#E8F4F8]/40 transition-colors">
+                    <td className="p-3 font-semibold text-gray-800">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono text-xs text-[#0B4F6C] bg-[#E8F4F8] px-2 py-0.5 rounded font-bold border border-[#D1E3EB]">
+                          [{pair.bulk.codigo} ➔ {pair.tray?.codigo || '201'}]
+                        </span>
+                        <span>{pair.bulk.nombre.replace('X KG.', '').trim()}</span>
+                      </div>
                     </td>
-                  )}
-                </tr>
-              ))}
+                    <td className="p-3 text-center font-bold text-[#0B4F6C]">
+                      {pair.granelKg}
+                      {bulkReserved > 0 && (
+                        <span
+                          className="ml-1 text-amber-900 bg-amber-100 border border-amber-300 font-extrabold px-1.5 py-0.5 rounded text-xs inline-block"
+                          title={`${bulkReserved} Kg reservados en Preventa (RESERVA)`}
+                        >
+                          (-{bulkReserved}*)
+                        </span>
+                      )}{' '}
+                      <span className="text-xs font-normal text-gray-500">Kg</span>
+                    </td>
+                    <td className="p-3 text-center">
+                      <span
+                        className={`font-bold px-2.5 py-1 rounded-lg ${
+                          pair.bandejas <= 5
+                            ? 'bg-red-100 text-red-700 font-extrabold border border-red-200'
+                            : 'bg-sky-100 text-[#017E9A] border border-sky-200'
+                        }`}
+                      >
+                        {pair.bandejas}
+                        {trayReserved > 0 && (
+                          <span
+                            className="ml-1 text-amber-900 bg-amber-200 border border-amber-400 font-black px-1.5 py-0.5 rounded text-[11px]"
+                            title={`${trayReserved} bandejas reservadas en Preventa (RESERVA)`}
+                          >
+                            (-{trayReserved}*)
+                          </span>
+                        )}{' '}
+                        band.
+                      </span>
+                    </td>
+                    <td className="p-3 text-center">
+                      <span className="bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-lg text-xs font-bold inline-block">
+                        ~{pair.bandejasProducibles} bandejas
+                      </span>
+                    </td>
+                    {showValorizacion && (
+                      <td className="p-3 text-right font-bold text-emerald-700">
+                        ${Math.round(pair.valTotal).toLocaleString('es-AR')}
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
+        </div>
+
+        {/* Footnote Legend for Reserved Stock */}
+        <div className="px-4 py-2.5 bg-amber-50 border-t border-amber-200 text-xs text-amber-900 font-bold flex items-center justify-between flex-wrap gap-2">
+          <span className="flex items-center gap-1.5">
+            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+            <span><strong>* Cantidad Reservada:</strong> Muestra la cantidad de producto comprometida en Órdenes de Pedido en estado <strong>RESERVA</strong>.</span>
+          </span>
         </div>
       </div>
     </div>

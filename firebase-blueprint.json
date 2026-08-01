@@ -131,6 +131,22 @@
         "autoBackupEnabled": { "type": "boolean" },
         "lastBackupTime": { "type": "string" }
       }
+    },
+    "AppState": {
+      "title": "AppState",
+      "description": "Real-time application state synchronization document",
+      "type": "object",
+      "properties": {
+        "updatedAt": { "type": "string" }
+      }
+    },
+    "Backup": {
+      "title": "Backup",
+      "description": "System data backup JSON document",
+      "type": "object",
+      "properties": {
+        "createdAt": { "type": "string" }
+      }
     }
   },
   "firestore": {
@@ -173,6 +189,18 @@
     "systemConfig/{configId}": {
       "schema": { "$ref": "#/entities/SystemConfig" },
       "description": "System configuration parameters"
+    },
+    "appState/{docId}": {
+      "schema": { "$ref": "#/entities/AppState" },
+      "description": "Global application state synchronization document"
+    },
+    "backups/{backupId}": {
+      "schema": { "$ref": "#/entities/Backup" },
+      "description": "System database backups"
+    },
+    "test/{docId}": {
+      "schema": { "type": "object" },
+      "description": "Health check collection"
     }
   }
 }

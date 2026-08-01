@@ -1,4 +1,4 @@
-import { db } from './firebase';
+import { db, auth } from './firebase';
 import {
   doc,
   setDoc,
@@ -21,6 +21,7 @@ export interface FirestoreErrorInfo {
   path: string | null;
   authInfo: {
     userId?: string | null;
+    email?: string | null;
   };
 }
 
@@ -28,7 +29,8 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
     authInfo: {
-      userId: 'app-user',
+      userId: auth.currentUser?.uid || 'app-user',
+      email: auth.currentUser?.email || null,
     },
     operationType,
     path,

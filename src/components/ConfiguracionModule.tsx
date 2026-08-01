@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { syncDocumentToFirestore } from '../lib/firestoreSync';
 import { notebookLmMarkdown } from '../data/notebookLmContent';
 import {
   Settings,
@@ -30,6 +31,7 @@ import {
   ExternalLink,
   Sparkles,
   FileText,
+  Moon,
 } from 'lucide-react';
 import { ConfirmModal } from './modals/ConfirmModal';
 
@@ -60,11 +62,16 @@ export const ConfiguracionModule: React.FC = () => {
     systemConfig,
     updateSystemConfig,
     exportData,
+    importData,
     resetData,
     exportZipBackup,
     importZipBackup,
     products,
+    clients,
+    movements,
+    suppliers,
     rawMaterials,
+    ordersOP,
     requireLogin,
     setRequireLogin,
     users,
@@ -180,6 +187,58 @@ export const ConfiguracionModule: React.FC = () => {
   const [isNewCategoryModalOpen, setIsNewCategoryModalOpen] = useState(false);
   const [newCatRequiresValidation, setNewCatRequiresValidation] = useState(false);
   const [categoryBlockedMessage, setCategoryBlockedMessage] = useState<string | null>(null);
+
+  // Company Data state
+  const [razonSocial, setRazonSocial] = useState(systemConfig?.companyData?.razonSocial || 'Frizame - Congelados Premium');
+  const [rne, setRne] = useState(systemConfig?.companyData?.rne || '02-034.567');
+  const [rnpa, setRnpa] = useState(systemConfig?.companyData?.rnpa || '02-589.123');
+  const [direccion, setDireccion] = useState(systemConfig?.companyData?.direccion || 'Av. Rondeau 1024, CABA');
+  const [telefono, setTelefono] = useState(systemConfig?.companyData?.telefono || '1161746860');
+  const [instagram, setInstagram] = useState(systemConfig?.companyData?.instagram || '@frizame.ok');
+  const [facebook, setFacebook] = useState(systemConfig?.companyData?.facebook || '@frizame.ok');
+  const [whatsapp, setWhatsapp] = useState(systemConfig?.companyData?.whatsapp || '1161746860');
+  const [companyLogoUrl, setCompanyLogoUrl] = useState(systemConfig?.companyData?.companyLogoUrl || '');
+
+  const handleSaveCompanyData = (newLogo?: string) => {
+    const logoToSave = newLogo !== undefined ? newLogo : companyLogoUrl;
+    updateSystemConfig({
+      companyData: {
+        razonSocial,
+        rne,
+        rnpa,
+        direccion,
+        telefono,
+        instagram,
+        facebook,
+        whatsapp,
+        companyLogoUrl: logoToSave,
+      },
+    });
+
+    if (logoToSave) {
+      let link: HTMLLinkElement | null = document.querySelector("link[rel*='icon']");
+      if (!link) {
+        link = document.createElement('link');
+        link.type = 'image/x-icon';
+        link.rel = 'shortcut icon';
+        document.getElementsByTagName('head')[0].appendChild(link);
+      }
+      link.href = logoToSave;
+    }
+  };
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const url = event.target?.result as string;
+        setCompanyLogoUrl(url);
+        handleSaveCompanyData(url);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleAddCategory = () => {
     if (!newCategoryName.trim()) return;
@@ -464,13 +523,28 @@ export const ConfiguracionModule: React.FC = () => {
   const [showPass, setShowPass] = useState(false);
   const [passSavedMessage, setPassSavedMessage] = useState(false);
 
-  const [mermaDefaultPct, setMermaDefaultPct] = useState<number>(5);
-  const [margenComercioDefault, setMargenComercioDefault] = useState<number>(35);
-  const [margenParticularDefault, setMargenParticularDefault] = useState<number>(50);
+  const [mermaDefaultPct, setMermaDefaultPct] = useState<number>(
+    systemConfig?.mermaDefaultPct ?? 3.5
+  );
+  const [margenComercioDefault, setMargenComercioDefault] = useState<number>(
+    systemConfig?.margenComercioSugerido ?? 35
+  );
+  const [margenParticularDefault, setMargenParticularDefault] = useState<number>(
+    systemConfig?.margenParticularSugerido ?? 50
+  );
   const [diasAlertaDesactualizacion, setDiasAlertaDesactualizacion] = useState<number>(
     systemConfig?.diasAlertaDesactualizacionCosto || 30
   );
   const [savedParamsMessage, setSavedParamsMessage] = useState(false);
+
+  React.useEffect(() => {
+    if (systemConfig) {
+      if (systemConfig.mermaDefaultPct !== undefined) setMermaDefaultPct(systemConfig.mermaDefaultPct);
+      if (systemConfig.margenComercioSugerido !== undefined) setMargenComercioDefault(systemConfig.margenComercioSugerido);
+      if (systemConfig.margenParticularSugerido !== undefined) setMargenParticularDefault(systemConfig.margenParticularSugerido);
+      if (systemConfig.diasAlertaDesactualizacionCosto !== undefined) setDiasAlertaDesactualizacion(systemConfig.diasAlertaDesactualizacionCosto);
+    }
+  }, [systemConfig]);
 
   const saveRequireLogin = (val: boolean) => {
     triggerConfirm(
@@ -491,6 +565,12 @@ export const ConfiguracionModule: React.FC = () => {
   const handleAddUser = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newNombre.trim() || !newEmail.trim() || !newUserPassword.trim()) return;
+
+    const emailToRegister = newEmail.trim().toLowerCase();
+    if (users.some((u) => u.email.toLowerCase() === emailToRegister)) {
+      alert(`El correo electrónico "${newEmail.trim()}" ya está registrado en el sistema. Debe ser único e irrepetible.`);
+      return;
+    }
 
     triggerConfirm(
       'Confirmar Registro de Usuario',
@@ -571,9 +651,10 @@ export const ConfiguracionModule: React.FC = () => {
       '¿Desea actualizar los márgenes sugeridos, mermas por defecto y días de alerta de desactualización?',
       () => {
         updateSystemConfig({
-          margenComercioSugerido: margenComercioDefault,
-          margenParticularSugerido: margenParticularDefault,
-          diasAlertaDesactualizacionCosto: diasAlertaDesactualizacion,
+          mermaDefaultPct: Number(mermaDefaultPct),
+          margenComercioSugerido: Number(margenComercioDefault),
+          margenParticularSugerido: Number(margenParticularDefault),
+          diasAlertaDesactualizacionCosto: Number(diasAlertaDesactualizacion),
         });
         setSavedParamsMessage(true);
         setTimeout(() => setSavedParamsMessage(false), 3000);
@@ -631,7 +712,7 @@ export const ConfiguracionModule: React.FC = () => {
         <div>
           <h2 className="font-brand font-bold text-2xl text-[#0B4F6C] flex items-center gap-2">
             <Settings className="w-7 h-7 text-[#017E9A]" />
-            6. Configuración General del Sistema Y Seguridad
+            Configuración General del Sistema Y Seguridad
           </h2>
           <p className="text-sm text-[#607D8B]">
             Administración de usuarios, roles, ABM de categorías de productos, validación de códigos y parámetros de costos.
@@ -647,7 +728,7 @@ export const ConfiguracionModule: React.FC = () => {
       </div>
 
       {/* Internal Sub-Tabs Navigation for Reduced Vertical Scrolling */}
-      <div className="flex flex-wrap gap-2 border-b border-[#D1E3EB] pb-3 bg-[#F4F8FA] p-2 rounded-xl border">
+      <div className="flex flex-wrap items-center gap-2 border-b border-[#D1E3EB] pb-3 bg-[#F4F8FA] p-2 rounded-xl border">
         {role === 'Admin' && (
           <>
             <button
@@ -659,7 +740,7 @@ export const ConfiguracionModule: React.FC = () => {
               }`}
             >
               <Building2 className="w-4 h-4" />
-              <span>1. Categorías y Rangos de Código</span>
+              <span>Categorías y Rangos de Código</span>
             </button>
 
             <button
@@ -671,7 +752,7 @@ export const ConfiguracionModule: React.FC = () => {
               }`}
             >
               <Scale className="w-4 h-4" />
-              <span>2. Parámetros y Sobrecostos</span>
+              <span>Parámetros y Sobrecostos</span>
             </button>
           </>
         )}
@@ -685,7 +766,7 @@ export const ConfiguracionModule: React.FC = () => {
           }`}
         >
           <Users className="w-4 h-4" />
-          <span>3. Usuarios y Permisos</span>
+          <span>Usuarios y Permisos</span>
         </button>
 
         {role === 'Admin' && (
@@ -698,7 +779,7 @@ export const ConfiguracionModule: React.FC = () => {
             }`}
           >
             <Database className="w-4 h-4" />
-            <span>4. Base de Datos y Sistema</span>
+            <span>Base de Datos y Sistema</span>
           </button>
         )}
 
@@ -711,22 +792,27 @@ export const ConfiguracionModule: React.FC = () => {
           }`}
         >
           <Palette className="w-4 h-4 text-purple-500" />
-          <span>5. Colorimetría y Temas</span>
+          <span>Colorimetría y Temas</span>
         </button>
 
-        {role === 'Admin' && (
-          <button
-            onClick={() => setActiveSubTab('notebooklm')}
-            className={`py-2 px-4 rounded-lg font-brand font-bold text-xs sm:text-sm transition-all flex items-center gap-2 ${
-              activeSubTab === 'notebooklm'
-                ? 'bg-[#0B4F6C] text-white shadow-sm'
-                : 'bg-white text-[#0B4F6C] hover:bg-[#E8F4F8] border border-[#D1E3EB]'
-            }`}
-          >
-            <BookOpen className="w-4 h-4 text-emerald-600" />
-            <span>6. Cuaderno NotebookLM / Docs</span>
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => {
+            const blob = new Blob([notebookLmMarkdown], { type: 'text/markdown;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'Frizame_Cuaderno_NotebookLM_Documentacion.md';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+          }}
+          className="p-2.5 rounded-lg transition-all flex items-center justify-center bg-[#017E9A] hover:bg-[#016278] text-white shadow-xs sm:ml-auto"
+          title="Descargar archivo .MD con la arquitectura del sistema"
+        >
+          <Download className="w-4 h-4 text-sky-100" />
+        </button>
       </div>
 
       {/* SUB-TAB 1: Categorías y Rangos de Código */}
@@ -737,7 +823,7 @@ export const ConfiguracionModule: React.FC = () => {
             <div className="bg-[#E8F4F8] px-5 py-3 border-b border-[#D1E3EB] flex justify-between items-center">
               <h3 className="font-brand font-bold text-base text-[#0B4F6C] flex items-center gap-2">
                 <Settings className="w-5 h-5 text-[#017E9A]" />
-                ABM de Categorías de Productos
+                Categorías del sistema
               </h3>
             </div>
 
@@ -1089,7 +1175,7 @@ export const ConfiguracionModule: React.FC = () => {
             <div className="bg-[#E8F4F8] px-5 py-3 border-b border-[#D1E3EB]">
               <h3 className="font-brand font-bold text-lg text-[#0B4F6C] flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-[#017E9A]" />
-                ABM de Conceptos Adicionales de Costo (Flete, Mano de Obra, Gas)
+                Conceptos Adicionales de Costo
               </h3>
             </div>
 
@@ -1364,8 +1450,8 @@ export const ConfiguracionModule: React.FC = () => {
       {/* SUB-TAB 4: Base de Datos y Sistema */}
       {activeSubTab === 'sistema' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fadeIn">
-          {/* Business Data & Headers */}
-          <div className="bg-white rounded-xl border border-[#D1E3EB] shadow-sm overflow-hidden">
+          {/* Business Data & Headers - Full Width */}
+          <div className="col-span-full bg-white rounded-xl border border-[#D1E3EB] shadow-sm overflow-hidden">
             <div className="bg-[#E8F4F8] px-5 py-3 border-b border-[#D1E3EB]">
               <h3 className="font-brand font-bold text-base text-[#0B4F6C] flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-[#017E9A]" />
@@ -1378,7 +1464,8 @@ export const ConfiguracionModule: React.FC = () => {
                 <label className="block font-semibold text-gray-700 mb-0.5">Razón Social / Nombre Fantasía</label>
                 <input
                   type="text"
-                  defaultValue="Frizame - Congelados Premium"
+                  value={razonSocial}
+                  onChange={(e) => setRazonSocial(e.target.value)}
                   className="w-full p-2 border border-[#D1E3EB] rounded-lg font-bold text-[#0B4F6C]"
                 />
               </div>
@@ -1388,7 +1475,8 @@ export const ConfiguracionModule: React.FC = () => {
                   <label className="block font-semibold text-gray-700 mb-0.5">RNE (Establecimiento)</label>
                   <input
                     type="text"
-                    defaultValue="02-034.567"
+                    value={rne}
+                    onChange={(e) => setRne(e.target.value)}
                     className="w-full p-2 border border-[#D1E3EB] rounded-lg font-mono"
                   />
                 </div>
@@ -1396,7 +1484,8 @@ export const ConfiguracionModule: React.FC = () => {
                   <label className="block font-semibold text-gray-700 mb-0.5">RNPA (Producto Base)</label>
                   <input
                     type="text"
-                    defaultValue="02-589.123"
+                    value={rnpa}
+                    onChange={(e) => setRnpa(e.target.value)}
                     className="w-full p-2 border border-[#D1E3EB] rounded-lg font-mono"
                   />
                 </div>
@@ -1406,9 +1495,151 @@ export const ConfiguracionModule: React.FC = () => {
                 <label className="block font-semibold text-gray-700 mb-0.5">Dirección Planta / Local</label>
                 <input
                   type="text"
-                  defaultValue="Av. Rondeau 1024, CABA"
+                  value={direccion}
+                  onChange={(e) => setDireccion(e.target.value)}
                   className="w-full p-2 border border-[#D1E3EB] rounded-lg text-gray-700"
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-0.5">Teléfono Directo</label>
+                  <input
+                    type="text"
+                    value={telefono}
+                    onChange={(e) => setTelefono(e.target.value)}
+                    placeholder="1161746860"
+                    className="w-full p-2 border border-[#D1E3EB] rounded-lg text-gray-700"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-0.5">WhatsApp</label>
+                  <input
+                    type="text"
+                    value={whatsapp}
+                    onChange={(e) => setWhatsapp(e.target.value)}
+                    placeholder="1161746860"
+                    className="w-full p-2 border border-[#D1E3EB] rounded-lg text-gray-700"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-0.5">Instagram (@....)</label>
+                  <input
+                    type="text"
+                    value={instagram}
+                    onChange={(e) => setInstagram(e.target.value)}
+                    placeholder="@frizame.ok"
+                    className="w-full p-2 border border-[#D1E3EB] rounded-lg text-gray-700"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-gray-700 mb-0.5">Facebook (@...)</label>
+                  <input
+                    type="text"
+                    value={facebook}
+                    onChange={(e) => setFacebook(e.target.value)}
+                    placeholder="@frizame.ok"
+                    className="w-full p-2 border border-[#D1E3EB] rounded-lg text-gray-700"
+                  />
+                </div>
+              </div>
+
+              {/* Company Logo Upload Section */}
+              <div className="border-t border-[#D1E3EB] pt-3 mt-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1">
+                  <label className="block font-bold text-[#0B4F6C]">Logotipo Oficial de la Empresa (PNG / JPG / SVG)</label>
+                  <span className="text-[11px] font-semibold text-[#017E9A] bg-[#E8F4F8] px-2 py-0.5 rounded-md border border-[#D1E3EB]">
+                    Sugerido: Isotipo o logotipo compacto (120 × 120 px a 200 × 200 px | Proporción 1:1)
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-500 mb-2">
+                  El logotipo reemplazará únicamente la imagen/ícono izquierdo de la cabecera, manteniendo siempre intacto el texto corporativo "Frizame CONGELADOS PREMIUM".
+                </p>
+
+                {companyLogoUrl ? (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-[#F4F8FA] p-3 rounded-xl border border-[#D1E3EB]">
+                      {/* Light Preview */}
+                      <div className="bg-white p-3 rounded-lg border border-gray-200 flex flex-col items-center justify-center text-center">
+                        <span className="text-[10px] font-bold text-gray-400 mb-1">Vista Previa Fondo Claro (Reportes)</span>
+                        <img
+                          src={companyLogoUrl}
+                          alt="Logo Fondo Claro"
+                          className="h-10 w-auto object-contain max-w-full"
+                        />
+                      </div>
+                      {/* Dark Preview */}
+                      <div className="bg-[#0B4F6C] p-3 rounded-lg border border-[#017E9A]/40 flex flex-col items-center justify-center text-center">
+                        <span className="text-[10px] font-bold text-sky-200/80 mb-1">Vista Previa Fondo Oscuro (Header)</span>
+                        <img
+                          src={companyLogoUrl}
+                          alt="Logo Fondo Oscuro"
+                          className="h-10 w-auto object-contain max-w-full"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2 pt-1">
+                      <label className="text-xs text-[#017E9A] hover:underline font-bold cursor-pointer flex items-center gap-1">
+                        <Building2 className="w-3.5 h-3.5" />
+                        <span>Cambiar archivo de logotipo</span>
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/svg+xml,image/x-eps"
+                          onChange={handleLogoUpload}
+                          className="hidden"
+                        />
+                      </label>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCompanyLogoUrl('');
+                          handleSaveCompanyData('');
+                        }}
+                        className="text-xs text-red-600 hover:underline font-semibold"
+                      >
+                        Quitar logotipo
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center gap-1.5 p-4 border-2 border-dashed border-[#017E9A]/40 hover:border-[#017E9A] bg-[#E8F4F8]/40 hover:bg-[#E8F4F8] rounded-xl cursor-pointer transition-all text-center">
+                    <Building2 className="w-6 h-6 text-[#017E9A]" />
+                    <span className="font-bold text-[#0B4F6C] text-xs sm:text-sm">Subir Logotipo Oficial de la Empresa</span>
+                    <span className="text-[11px] text-gray-500 font-medium">
+                      Dimensiones recomendadas: Min. 120x40px | Máx. 600x200px (Soporta PNG transparente, JPG o SVG)
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/svg+xml,image/x-eps"
+                      onChange={handleLogoUpload}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerConfirm(
+                      'Guardar Datos de la Empresa',
+                      '¿Está seguro de guardar la Razón Social, RNE, RNPA, datos de contacto y logotipo oficial en la base de datos?',
+                      () => {
+                        handleSaveCompanyData();
+                        alert('¡Datos e imagen de la empresa guardados con éxito!');
+                      }
+                    );
+                  }}
+                  className="w-full py-2.5 bg-[#0B4F6C] hover:bg-[#083b52] text-white font-brand font-bold rounded-lg transition-colors shadow-xs text-sm"
+                >
+                  Guardar Datos de la Empresa
+                </button>
               </div>
             </div>
           </div>
@@ -1514,9 +1745,15 @@ export const ConfiguracionModule: React.FC = () => {
                       checked={autoBackupEnabled}
                       onChange={(e) => {
                         if (role !== 'Admin') return;
-                        const val = e.target.checked;
-                        setAutoBackupEnabled(val);
-                        updateSystemConfig({ autoBackupEnabled: val });
+                        const nextVal = e.target.checked;
+                        triggerConfirm(
+                          'Cambiar Respaldos Automáticos (.JSON)',
+                          `¿Está seguro de ${nextVal ? 'activar' : 'desactivar'} la generación automática de respaldos .JSON en Google Drive y la Nube al registrar Ventas o Fraccionamientos?`,
+                          () => {
+                            setAutoBackupEnabled(nextVal);
+                            updateSystemConfig({ autoBackupEnabled: nextVal });
+                          }
+                        );
                       }}
                       className="sr-only peer"
                     />
@@ -1528,10 +1765,9 @@ export const ConfiguracionModule: React.FC = () => {
                 </div>
               </div>
 
-              {/* Manual Backup & Import JSON / ZIP */}
-              <div className="pt-3 border-t border-[#D1E3EB] flex flex-col gap-3">
-                {/* Primary Respaldar Ahora Button */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              {/* Primary Actions: Drive & Cloud Sync */}
+              <div className="pt-3 border-t border-[#D1E3EB] space-y-3">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
                   <button
                     type="button"
                     disabled={role !== 'Admin'}
@@ -1540,8 +1776,19 @@ export const ConfiguracionModule: React.FC = () => {
                       const dateStr = new Date().toISOString().split('T')[0];
                       const targetFileName = `frizame_backup_${dateStr}.json`;
                       
-                      // Trigger JSON data export
-                      exportData();
+                      const dataToBackup = {
+                        products,
+                        clients,
+                        movements,
+                        suppliers,
+                        rawMaterials,
+                        ordersOP,
+                        categories,
+                        systemConfig,
+                        backupDate: new Date().toISOString(),
+                      };
+
+                      syncDocumentToFirestore('backups', 'latest_json', dataToBackup);
 
                       updateSystemConfig({
                         lastGoogleDriveBackupTime: new Date().toISOString(),
@@ -1549,96 +1796,149 @@ export const ConfiguracionModule: React.FC = () => {
                       });
 
                       setBackupMsg(
-                        `¡Respaldo forzado con éxito! Se generó y descargó el archivo .JSON (${targetFileName}) listo para guardar en Google Drive.`
+                        `¡Respaldo guardado exitosamente! El archivo .JSON (${targetFileName}) ha sido sincronizado en la carpeta de Google Drive y Nube Firebase.`
                       );
                       setTimeout(() => setBackupMsg(null), 6000);
                     }}
-                    className={`flex-1 py-3 px-4 text-white font-brand font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm text-sm ${
+                    className={`flex-1 py-2.5 px-3.5 text-white font-brand font-bold rounded-lg transition-all flex items-center justify-center gap-2 shadow-xs text-xs sm:text-sm ${
                       role !== 'Admin'
                         ? 'bg-gray-300 cursor-not-allowed'
                         : 'bg-[#017E9A] hover:bg-[#016278] active:scale-[0.99] border border-sky-300/30'
                     }`}
                   >
-                    <CloudUpload className="w-5 h-5 text-sky-200" />
-                    <span>Respaldar ahora (.JSON)</span>
+                    <CloudUpload className="w-4 h-4 text-sky-200" />
+                    <span>Respaldar ahora en Google Drive (.JSON)</span>
                   </button>
 
                   <a
                     href={`https://drive.google.com/drive/folders/${driveFolderId.trim() || '104YhtlxWzrCUPjdjn5UKFI43e3rTW1ey'}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="py-3 px-4 bg-[#E8F4F8] hover:bg-[#D1E3EB] text-[#0B4F6C] font-brand font-bold rounded-xl border border-[#D1E3EB] transition-colors flex items-center justify-center gap-2 text-xs shrink-0"
+                    className="py-2.5 px-3.5 bg-[#E8F4F8] hover:bg-[#D1E3EB] text-[#0B4F6C] font-brand font-bold rounded-lg border border-[#D1E3EB] transition-colors flex items-center justify-center gap-1.5 text-xs shrink-0"
                   >
-                    <ExternalLink className="w-4 h-4 text-[#017E9A]" />
-                    <span>Abrir Carpeta Google Drive</span>
+                    <ExternalLink className="w-3.5 h-3.5 text-[#017E9A]" />
+                    <span>Abrir Carpeta Drive</span>
                   </a>
                 </div>
 
-                {/* Secondary Actions Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                  <button
-                    type="button"
-                    disabled={role !== 'Admin'}
-                    onClick={async () => {
-                      if (role !== 'Admin') return;
-                      const res = await exportZipBackup(true);
-                      const filename = typeof res === 'string' ? res : res?.filename || 'frizame_backup.zip';
-                      setBackupMsg(`¡Backup ZIP descargado con éxito! (${filename})`);
-                      setTimeout(() => setBackupMsg(null), 4000);
-                    }}
-                    className={`py-2 px-3 text-white font-brand font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-xs text-xs ${
+                {/* Secondary Actions: Local Downloads & Restores */}
+                <div className="bg-[#F4F8FA] p-3 rounded-xl border border-[#D1E3EB] space-y-2">
+                  <span className="text-[11px] font-bold text-[#0B4F6C] block uppercase tracking-wider">
+                    Gestión Local de Paquetes ZIP &amp; Archivos JSON:
+                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {/* Restaurar .JSON */}
+                    <label className={`py-2 px-2.5 text-white font-brand font-bold rounded-lg transition-colors flex items-center justify-center gap-1 text-xs text-center ${
                       role !== 'Admin'
                         ? 'bg-gray-300 cursor-not-allowed'
-                        : 'bg-[#0B4F6C] hover:bg-[#083b52]'
-                    }`}
-                  >
-                    <Download className="w-3.5 h-3.5 text-sky-300" />
-                    <span>Descargar Backup .ZIP</span>
-                  </button>
+                        : 'bg-emerald-600 hover:bg-emerald-700 cursor-pointer'
+                    }`}>
+                      <Database className="w-3.5 h-3.5 text-emerald-200 shrink-0" />
+                      <span>Restaurar JSON</span>
+                      <input
+                        type="file"
+                        accept=".json"
+                        disabled={role !== 'Admin'}
+                        className="hidden"
+                        onChange={(e) => {
+                          if (role !== 'Admin') return;
+                          const file = e.target.files?.[0];
+                          if (!file) return;
 
-                  <label className={`py-2 px-3 text-white font-brand font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 text-xs text-center ${
-                    role !== 'Admin'
-                      ? 'bg-gray-300 cursor-not-allowed'
-                      : 'bg-emerald-700 hover:bg-emerald-800 cursor-pointer'
-                  }`}>
-                    <Database className="w-3.5 h-3.5 text-emerald-300" />
-                    <span>Restaurar Desde .ZIP</span>
-                    <input
-                      type="file"
-                      accept=".zip"
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            try {
+                              const jsonData = JSON.parse(event.target?.result as string);
+                              triggerConfirm(
+                                'Restaurar Sistema desde Respaldo .JSON',
+                                `¿Está seguro de restaurar el sistema desde el archivo "${file.name}"? Todos los datos actuales serán reemplazados.`,
+                                () => {
+                                  const success = importData(jsonData);
+                                  if (success) {
+                                    setBackupMsg('¡Sistema restaurado con éxito desde el archivo .JSON!');
+                                  } else {
+                                    alert('El archivo no posee la estructura válida de Frizame.');
+                                  }
+                                  setTimeout(() => setBackupMsg(null), 5000);
+                                }
+                              );
+                            } catch (err) {
+                              alert('Error al leer el archivo .JSON.');
+                            }
+                          };
+                          reader.readAsText(file);
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
+
+                    {/* Descargar .ZIP */}
+                    <button
+                      type="button"
                       disabled={role !== 'Admin'}
-                      className="hidden"
-                      onChange={async (e) => {
+                      onClick={async () => {
                         if (role !== 'Admin') return;
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        const ok = await importZipBackup(file);
-                        if (ok) {
-                          setBackupMsg('¡Restauración desde paquete .ZIP completada con éxito!');
-                        } else {
-                          alert('Error al procesar el archivo .ZIP de respaldo.');
-                        }
+                        const res = await exportZipBackup(true);
+                        const filename = typeof res === 'string' ? res : res?.filename || 'frizame_backup.zip';
+                        setBackupMsg(`¡Backup ZIP descargado! (${filename})`);
                         setTimeout(() => setBackupMsg(null), 4000);
                       }}
-                    />
-                  </label>
+                      className={`py-2 px-2.5 text-white font-brand font-bold rounded-lg transition-colors flex items-center justify-center gap-1 shadow-xs text-xs ${
+                        role !== 'Admin'
+                          ? 'bg-gray-300 cursor-not-allowed'
+                          : 'bg-[#0B4F6C] hover:bg-[#083b52]'
+                      }`}
+                    >
+                      <Download className="w-3.5 h-3.5 text-sky-300 shrink-0" />
+                      <span>Descargar .ZIP</span>
+                    </button>
 
-                  <button
-                    type="button"
-                    disabled={role !== 'Admin'}
-                    onClick={() => {
-                      if (role !== 'Admin') return;
-                      exportData();
-                    }}
-                    className={`py-2 px-3 text-white font-brand font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 text-xs ${
+                    {/* Restaurar .ZIP */}
+                    <label className={`py-2 px-2.5 text-white font-brand font-bold rounded-lg transition-colors flex items-center justify-center gap-1 text-xs text-center ${
                       role !== 'Admin'
                         ? 'bg-gray-300 cursor-not-allowed'
-                        : 'bg-slate-700 hover:bg-slate-800'
-                    }`}
-                  >
-                    <FileText className="w-3.5 h-3.5 text-slate-300" />
-                    <span>Exportar JSON Simple</span>
-                  </button>
+                        : 'bg-emerald-800 hover:bg-emerald-900 cursor-pointer'
+                    }`}>
+                      <Database className="w-3.5 h-3.5 text-emerald-300 shrink-0" />
+                      <span>Restaurar ZIP</span>
+                      <input
+                        type="file"
+                        accept=".zip"
+                        disabled={role !== 'Admin'}
+                        className="hidden"
+                        onChange={async (e) => {
+                          if (role !== 'Admin') return;
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const ok = await importZipBackup(file);
+                          if (ok) {
+                            setBackupMsg('¡Restauración desde .ZIP completada!');
+                          } else {
+                            alert('Error al procesar el archivo .ZIP.');
+                          }
+                          setTimeout(() => setBackupMsg(null), 4000);
+                        }}
+                      />
+                    </label>
+
+                    {/* Descargar .JSON Local */}
+                    <button
+                      type="button"
+                      disabled={role !== 'Admin'}
+                      onClick={() => {
+                        if (role !== 'Admin') return;
+                        exportData();
+                      }}
+                      className={`py-2 px-2.5 text-white font-brand font-bold rounded-lg transition-colors flex items-center justify-center gap-1 text-xs ${
+                        role !== 'Admin'
+                          ? 'bg-gray-300 cursor-not-allowed'
+                          : 'bg-slate-700 hover:bg-slate-800'
+                      }`}
+                    >
+                      <FileText className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+                      <span>Descargar JSON</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1750,6 +2050,29 @@ export const ConfiguracionModule: React.FC = () => {
                   <div className="w-1/3 bg-[#064E3B]" />
                   <div className="w-1/3 bg-[#10B981]" />
                   <div className="w-1/3 bg-emerald-50" />
+                </div>
+              </div>
+
+              {/* Palette 4: Modo Oscuro Nocturno (Dark Mode) */}
+              <div
+                onClick={() => handleSaveTheme('dark')}
+                className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                  selectedTheme === 'dark'
+                    ? 'border-sky-500 bg-slate-900 text-white shadow-md ring-2 ring-sky-500/40'
+                    : 'border-slate-800 bg-slate-950 text-slate-100 hover:border-sky-500'
+                }`}
+              >
+                <div className="flex justify-between items-center mb-3">
+                  <div className="flex items-center gap-1.5">
+                    <Moon className="w-4 h-4 text-sky-400" />
+                    <span className="font-brand font-bold text-sm text-white">Modo Oscuro Nocturno</span>
+                  </div>
+                  {selectedTheme === 'dark' && <Check className="w-4 h-4 text-sky-400" />}
+                </div>
+                <div className="flex gap-1.5 h-6 rounded-lg overflow-hidden border border-slate-700">
+                  <div className="w-1/3 bg-[#0B0F17]" />
+                  <div className="w-1/3 bg-[#0284C7]" />
+                  <div className="w-1/3 bg-[#1E293B]" />
                 </div>
               </div>
             </div>

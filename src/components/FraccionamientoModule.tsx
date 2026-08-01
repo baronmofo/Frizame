@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { Product } from '../types';
 import { ConfirmModal } from './modals/ConfirmModal';
+import { getReservedQtyForProduct } from '../utils/stockUtils';
 
 interface FraccionamientoModuleProps {
   openNuevaRecetaModal: (productId?: number | string) => void;
@@ -50,6 +51,7 @@ export const FraccionamientoModule: React.FC<FraccionamientoModuleProps> = ({
     rawMaterials,
     recipes,
     movements,
+    ordersOP,
     deleteProduct,
     reactivateProduct,
     deleteRecipe,
@@ -126,6 +128,13 @@ export const FraccionamientoModule: React.FC<FraccionamientoModuleProps> = ({
     return match || products.find((p) => p.codigo.startsWith('2')) || null;
   }, [selectedOrigin, products]);
 
+  const destinationRecipe = useMemo(() => {
+    if (!selectedDestination) return null;
+    return recipes.find(
+      (r) => r.productoId === selectedDestination.id || String(r.productoId) === String(selectedDestination.id)
+    );
+  }, [recipes, selectedDestination]);
+
   // Load default category mermaPct when destination product changes (editable by operator)
   React.useEffect(() => {
     if (selectedDestination) {
@@ -149,6 +158,17 @@ export const FraccionamientoModule: React.FC<FraccionamientoModuleProps> = ({
   const netGrams = Math.max(0, kgInput * 1000 * (1 - mermaPct / 100));
   const resultingTrays = gramsPerTray > 0 ? Math.floor(netGrams / gramsPerTray) : 0;
 
+  const systemCategories = useMemo(() => {
+    const raw = systemConfig?.productCategories || [
+      '1XX - Granel (Kg)',
+      '2XX - Bandeja',
+      'Insumo',
+      'Marketing',
+      'Otros',
+    ];
+    return raw.map((c: any) => (typeof c === 'string' ? c : c.nombre));
+  }, [systemConfig?.productCategories]);
+
   // Sort and filter product list
   const filteredProducts = useMemo(() => {
     return products
@@ -159,15 +179,38 @@ export const FraccionamientoModule: React.FC<FraccionamientoModuleProps> = ({
 
         if (!matchesSearch) return false;
 
-        if (categoryFilter === '1xx') return p.codigo.startsWith('1');
-        if (categoryFilter === '2xx') return p.codigo.startsWith('2');
+        if (categoryFilter === 'all') return true;
         if (categoryFilter === 'alerta') {
           return (
-            (p.tipo === 'Gramos' && (p.stockGranelKg || 0) <= 5) ||
-            (p.tipo === 'Bandeja' && (p.stockBandejas || 0) <= 5)
+            (p.tipo === 'Gramos' && (p.stockGranelKg || 0) <= (p.stockMinimo ?? 5)) ||
+            (p.tipo === 'Bandeja' && (p.stockBandejas || 0) <= (p.stockMinimo ?? 5))
           );
         }
-        return true;
+        if (categoryFilter === '1xx' || categoryFilter.includes('1XX') || categoryFilter.includes('Granel')) {
+          const num = parseInt(p.codigo.replace(/\D/g, ''), 10);
+          const rules = systemConfig?.codeValidationRules?.granel;
+          if (rules && !isNaN(num)) {
+            return num >= rules.min && num <= rules.max;
+          }
+          return p.codigo.startsWith('1') || p.tipo.includes('1XX') || p.categoria?.includes('1XX');
+        }
+        if (categoryFilter === '2xx' || categoryFilter.includes('2XX') || categoryFilter.includes('Bandeja')) {
+          const num = parseInt(p.codigo.replace(/\D/g, ''), 10);
+          const rules = systemConfig?.codeValidationRules?.bandeja;
+          if (rules && !isNaN(num)) {
+            return num >= rules.min && num <= rules.max;
+          }
+          return p.codigo.startsWith('2') || p.tipo.includes('2XX') || p.categoria?.includes('2XX');
+        }
+        if (categoryFilter === 'insumos' || categoryFilter.toLowerCase().includes('insumo') || categoryFilter === '4xx') {
+          const num = parseInt(p.codigo.replace(/\D/g, ''), 10);
+          const rules = systemConfig?.codeValidationRules?.insumos;
+          if (rules && !isNaN(num)) {
+            return num >= rules.min && num <= rules.max;
+          }
+          return p.tipo === 'Insumo' || p.categoria === 'Insumo' || p.codigo.startsWith('4');
+        }
+        return p.categoria === categoryFilter || p.tipo === categoryFilter;
       })
       .sort((a, b) => {
         let valA: any = a[sortField];
@@ -258,8 +301,8 @@ export const FraccionamientoModule: React.FC<FraccionamientoModuleProps> = ({
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-[#D1E3EB] pb-4">
         <div>
           <h2 className="font-brand font-bold text-2xl text-[#0B4F6C] flex items-center gap-2">
-            <RotateCw className="w-7 h-7 text-[#017E9A]" />
-            4. Productos y Fraccionamiento Operativo
+            <Scale className="w-7 h-7 text-[#017E9A]" />
+            Productos y Fraccionamiento Operativo
           </h2>
           <p className="text-sm text-[#607D8B]">
             Gestión del catálogo de productos, composición de recetas y conversión rápida de Productos Origen (1XX) a Productos Destino (2XX).
@@ -304,36 +347,29 @@ export const FraccionamientoModule: React.FC<FraccionamientoModuleProps> = ({
               >
                 Todos ({products.length + rawMaterials.length})
               </button>
-              <button
-                onClick={() => setCategoryFilter('1xx')}
-                className={`px-2.5 py-1 rounded-md transition-colors ${
-                  categoryFilter === '1xx'
-                    ? 'bg-[#017E9A] text-white font-semibold'
-                    : 'text-[#0B4F6C] hover:bg-white/50'
-                }`}
-              >
-                Granel (1XX)
-              </button>
-              <button
-                onClick={() => setCategoryFilter('2xx')}
-                className={`px-2.5 py-1 rounded-md transition-colors ${
-                  categoryFilter === '2xx'
-                    ? 'bg-[#017E9A] text-white font-semibold'
-                    : 'text-[#0B4F6C] hover:bg-white/50'
-                }`}
-              >
-                Bandejas (2XX)
-              </button>
-              <button
-                onClick={() => setCategoryFilter('insumos')}
-                className={`px-2.5 py-1 rounded-md transition-colors ${
-                  categoryFilter === 'insumos'
-                    ? 'bg-[#0B4F6C] text-white font-semibold'
-                    : 'text-[#0B4F6C] hover:bg-white/50'
-                }`}
-              >
-                Insumos ({rawMaterials.length})
-              </button>
+
+              {systemCategories.map((catName) => {
+                const isActive =
+                  categoryFilter === catName ||
+                  (catName.includes('1XX') && categoryFilter === '1xx') ||
+                  (catName.includes('2XX') && categoryFilter === '2xx') ||
+                  (catName.includes('Insumo') && categoryFilter === 'insumos');
+
+                return (
+                  <button
+                    key={catName}
+                    onClick={() => setCategoryFilter(catName)}
+                    className={`px-2.5 py-1 rounded-md transition-colors ${
+                      isActive
+                        ? 'bg-[#017E9A] text-white font-semibold'
+                        : 'text-[#0B4F6C] hover:bg-white/50'
+                    }`}
+                  >
+                    {catName}
+                  </button>
+                );
+              })}
+
               <button
                 onClick={() => setCategoryFilter('alerta')}
                 className={`px-2.5 py-1 rounded-md transition-colors ${
@@ -538,6 +574,7 @@ export const FraccionamientoModule: React.FC<FraccionamientoModuleProps> = ({
                       const isInactive = p.activo === false;
                       const currentStock = p.tipo === 'Bandeja' ? p.stockBandejas || 0 : p.stockGranelKg || 0;
                       const stockUnit = p.tipo === 'Bandeja' ? 'bandejas' : 'Kg';
+                      const reservedQty = getReservedQtyForProduct(p, ordersOP);
                       const isLowStock = currentStock <= 5;
 
                       const recipeMatch = recipes.find(
@@ -605,7 +642,16 @@ export const FraccionamientoModule: React.FC<FraccionamientoModuleProps> = ({
                                   }`}
                                 >
                                   {!isInactive && isLowStock && <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />}
-                                  {currentStock} {stockUnit}
+                                  {currentStock}
+                                  {reservedQty > 0 && (
+                                    <span
+                                      className="ml-1 text-amber-900 bg-amber-200 border border-amber-400 font-extrabold px-1.5 py-0.5 rounded text-[11px]"
+                                      title={`${reservedQty} ${stockUnit} reservados en Preventa (RESERVA)`}
+                                    >
+                                      (-{reservedQty}*)
+                                    </span>
+                                  )}{' '}
+                                  {stockUnit}
                                 </span>
 
                                 {!isInactive && isLowStock && openNotaCompraModal && (
@@ -891,27 +937,36 @@ export const FraccionamientoModule: React.FC<FraccionamientoModuleProps> = ({
               </table>
             </div>
 
-            {/* Insumos section when "Todos" filter is active */}
-            {categoryFilter === 'all' && (
+            {/* Footnote Legend for Reserved Stock */}
+            <div className="px-4 py-2 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 font-bold flex items-center justify-between flex-wrap gap-2">
+              <span className="flex items-center gap-1.5">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                <span><strong>* Cantidad Reservada:</strong> Indica la cantidad de producto retenida por Órdenes de Pedido en estado <strong>RESERVA</strong>.</span>
+              </span>
+            </div>
+
+            {/* Insumos section when "Todos" or "Insumos" filter is active */}
+            {(categoryFilter === 'all' || categoryFilter.toLowerCase().includes('insumo') || categoryFilter === '4xx') && (
               <div className="pt-4 border-t border-[#D1E3EB] space-y-3">
                 <h4 className="font-brand font-bold text-base text-[#0B4F6C] flex items-center gap-2">
                   <Layers className="w-5 h-5 text-[#017E9A]" />
                   Insumos y Materias Primas ({filteredInsumos.length})
                 </h4>
-                <div className="max-h-48 overflow-y-auto border border-[#D1E3EB] rounded-xl bg-white shadow-inner">
+                <div className="max-h-56 overflow-y-auto border border-[#D1E3EB] rounded-xl bg-white shadow-inner">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead className="bg-[#E8F4F8] text-[#0B4F6C] font-semibold sticky top-0 border-b border-[#D1E3EB]">
                       <tr>
-                        <th className="p-2.5 font-bold">Insumo</th>
+                        <th className="p-2.5 font-bold">Insumo / Materia Prima</th>
                         <th className="p-2.5 font-bold">Proveedor</th>
                         <th className="p-2.5 font-bold">Presentación</th>
+                        <th className="p-2.5 font-bold text-right">Cantidad en Stock</th>
                         <th className="p-2.5 text-center font-bold">Acción</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#D1E3EB]">
                       {filteredInsumos.length === 0 ? (
                         <tr>
-                          <td colSpan={4} className="p-3 text-center text-gray-500">
+                          <td colSpan={5} className="p-3 text-center text-gray-500">
                             No hay insumos para mostrar.
                           </td>
                         </tr>
@@ -921,6 +976,11 @@ export const FraccionamientoModule: React.FC<FraccionamientoModuleProps> = ({
                             <td className="p-2.5 font-semibold text-gray-800">{r.nombre}</td>
                             <td className="p-2.5 text-gray-600">{r.proveedor}</td>
                             <td className="p-2.5 text-gray-600">{r.presentacion}</td>
+                            <td className="p-2.5 text-right font-bold text-[#0B4F6C]">
+                              <span className="px-2 py-0.5 bg-emerald-50 text-emerald-800 rounded-md border border-emerald-200">
+                                {r.stockActual !== undefined ? r.stockActual : 100} u.
+                              </span>
+                            </td>
                             <td className="p-2.5 text-center">
                               {openNotaCompraModal && (
                                 <button
@@ -1044,23 +1104,50 @@ export const FraccionamientoModule: React.FC<FraccionamientoModuleProps> = ({
                   </span>
                 </div>
 
-                <div className="p-2 bg-amber-50 rounded-lg border border-amber-200">
-                  <span className="text-amber-800 font-semibold block text-[11px]">Bandejas Plásticas Vacías:</span>
-                  <strong className="text-amber-950 text-sm font-bold">-{resultingTrays} u.</strong>
-                  <span className="text-[10px] text-gray-500 block">Insumo Envase Estándar</span>
-                </div>
+                {destinationRecipe?.insumos && destinationRecipe.insumos.length > 0 ? (
+                  destinationRecipe.insumos.map((item, idx) => {
+                    const rm = rawMaterials.find(
+                      (m) =>
+                        m.id === item.insumoId ||
+                        String(m.id) === String(item.insumoId) ||
+                        m.nombre.toLowerCase().includes(item.insumoNombre.toLowerCase())
+                    );
+                    const reqQty = Number((item.gramosOCantidad * resultingTrays).toFixed(2));
+                    const currentStock = rm?.stockActual !== undefined ? rm.stockActual : 'N/D';
 
-                <div className="p-2 bg-amber-50 rounded-lg border border-amber-200">
-                  <span className="text-amber-800 font-semibold block text-[11px]">Film Termosellable:</span>
-                  <strong className="text-amber-950 text-sm font-bold">-{resultingTrays} u.</strong>
-                  <span className="text-[10px] text-gray-500 block">Sellado de Bandejas</span>
-                </div>
-
-                <div className="p-2 bg-amber-50 rounded-lg border border-amber-200">
-                  <span className="text-amber-800 font-semibold block text-[11px]">Rótulo &amp; Sticker Adhesivo:</span>
-                  <strong className="text-amber-950 text-sm font-bold">-{resultingTrays} u.</strong>
-                  <span className="text-[10px] text-gray-500 block">Etiquetado de Producto</span>
-                </div>
+                    return (
+                      <div key={idx} className="p-2 bg-amber-50 rounded-lg border border-amber-200">
+                        <span className="text-amber-800 font-semibold block text-[11px] truncate">
+                          {item.insumoNombre}:
+                        </span>
+                        <strong className="text-amber-950 text-sm font-bold">
+                          -{reqQty} {item.unidad || 'u.'}
+                        </strong>
+                        <span className="text-[10px] text-gray-500 block truncate">
+                          Stock inv: {currentStock} {rm?.unidadMedida || item.unidad || ''}
+                        </span>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <>
+                    <div className="p-2 bg-amber-50 rounded-lg border border-amber-200">
+                      <span className="text-amber-800 font-semibold block text-[11px]">Bandeja Plástica Vacía:</span>
+                      <strong className="text-amber-950 text-sm font-bold">-{resultingTrays} u.</strong>
+                      <span className="text-[10px] text-gray-500 block">Envase Estándar</span>
+                    </div>
+                    <div className="p-2 bg-amber-50 rounded-lg border border-amber-200">
+                      <span className="text-amber-800 font-semibold block text-[11px]">Film Termosellable:</span>
+                      <strong className="text-amber-950 text-sm font-bold">-{resultingTrays} u.</strong>
+                      <span className="text-[10px] text-gray-500 block">Sellado de Bandejas</span>
+                    </div>
+                    <div className="p-2 bg-amber-50 rounded-lg border border-amber-200">
+                      <span className="text-amber-800 font-semibold block text-[11px]">Rótulo Autoadhesivo:</span>
+                      <strong className="text-amber-950 text-sm font-bold">-{resultingTrays} u.</strong>
+                      <span className="text-[10px] text-gray-500 block">Etiquetado</span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
